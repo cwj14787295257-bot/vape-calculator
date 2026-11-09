@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Make My Vape · 电子烟液配比计算台 (E-Liquid Studio)</title>
+  
+  <!-- 外部 CDN: Tailwind CSS, Vue 3, html2canvas -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <script>
+    // 配置 Tailwind 支持媒体查询自动跟随系统深色/浅色模式
+    tailwind.config = {
+      darkMode: 'media',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', '"Inter"', 'Helvetica', 'Arial', 'sans-serif'],
+          },
+          colors: {
+            apple: {
+              blue: '#0071E3',
+              blueHover: '#0077ED',
+              darkBg: '#000000',
+              darkCard: '#141416',
+              darkCardSec: '#1D1D1F',
+              lightBg: '#F5F5F7',
+              lightCard: '#FFFFFF',
+              lightCardSec: '#EBEBF0',
+              grayText: '#86868B',
+              darkText: '#1D1D1F',
+              whiteText: '#F5F5F7',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* 核心视觉与自适应变量 */
+    :root {
+      --theme-bg: #F5F5F7;
+      --theme-card: #FFFFFF;
+      --theme-card-sec: #F0F0F2;
+      --theme-border: rgba(0, 0, 0, 0.08);
+      --theme-text: #1D1D1F;
+      --theme-subtext: #86868B;
+      --theme-nav: rgba(255, 255, 255, 0.75);
+      --theme-table-hover: rgba(0, 0, 0, 0.02);
+      --theme-input-bg: #F5F5F7;
+      --theme-card-hover-border: rgba(0, 113, 227, 0.35);
+      color-scheme: light dark;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --theme-bg: #000000;
+        --theme-card: #141416;
+        --theme-card-sec: #1D1D1F;
+        --theme-border: rgba(255, 255, 255, 0.1);
+        --theme-text: #F5F5F7;
+        --theme-subtext: #86868B;
+        --theme-nav: rgba(0, 0, 0, 0.72);
+        --theme-table-hover: rgba(255, 255, 255, 0.03);
+        --theme-input-bg: #1D1D1F;
+        --theme-card-hover-border: rgba(255, 255, 255, 0.25);
+      }
+    }
+
+    body {
+      background-color: var(--theme-bg);
+      color: var(--theme-text);
+      transition: background-color 0.5s ease, color 0.5s ease;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 滚动渐入动画状态 */
+    .reveal-on-scroll {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal-on-scroll.is-revealed {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* 滑块自定义美化 */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: transparent;
+    }
+    input[type=range]:focus {
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 6px;
+      cursor: pointer;
+      background: rgba(134, 134, 139, 0.3);
+      border-radius: 9999px;
+      transition: background 0.3s;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      height: 20px;
+      width: 20px;
+      border-radius: 50%;
+      background: #0071E3;
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -7px;
+      box-shadow: 0 2px 8px rgba(0, 113, 227, 0.5);
+      transition: transform 0.15s ease, background-color 0.15s;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      background: #0077ED;
+    }
+
+    /* 隐藏数字输入框自带的上下微调按钮 */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type="number"] {
+      -moz-appearance: textfield;
+    }
+
+    /* 打印专用样式 */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      .bento-card {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+        background: #fff !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen selection:bg-blue-600 selection:text-white">
+  <div id="app" class="flex flex-col min-h-screen">
+
+    <!-- 18+ 未成年人拦截与年龄核验全屏弹窗 -->
+    <div v-if="showAgeModal" class="fixed inset-0 z-[100] backdrop-blur-xl bg-black/80 flex items-center justify-center p-4 transition-all duration-500">
+      <div class="max-w-md w-full rounded-3xl p-6 sm:p-8 border shadow-2xl relative"
+           style="background-color: var(--theme-card); border-color: var(--theme-border); color: var(--theme-text);">
+        
+        <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-5 mx-auto">
+          <span class="text-xl font-bold font-mono">18+</span>
+        </div>
+
+        <h2 class="text-xl font-bold text-center tracking-tight mb-2">年龄核验与健康警示</h2>
+        
+        <!-- 法定健康警示语 -->
+        <div class="my-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center space-y-1 text-xs">
+          <p class="font-bold text-amber-600 dark:text-amber-400 text-sm">吸电子烟有害健康</p>
+          <p class="text-amber-700 dark:text-amber-300">请勿在禁烟场所吸电子烟</p>
+          <p class="font-semibold text-amber-600 dark:text-amber-400">劝阻青少年吸电子烟 禁止中小学生吸电子烟</p>
+        </div>
+
+        <div class="text-xs leading-relaxed space-y-2 mb-6" style="color: var(--theme-subtext);">
+          <p>
+            依据《中华人民共和国未成年人保护法》及《电子烟管理办法》，本站禁止未成年人访问与使用。
+          </p>
+          <p>
+            本站为电子烟液物理比重换算与学术研究模拟工具。中国大陆禁止销售除烟草口味外的调味电子烟，禁止销售开放式注油电子烟。严禁利用本工具从事非法配置与商业销售。
+          </p>
+        </div>
+
+        <!-- 未满18岁被拦截状态 -->
+        <div v-if="isUnderageBlocked" class="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs text-center mb-4">
+          依据相关法律法规，未成年人禁止使用本工具。请关闭此页面。
+        </div>
+
+        <div v-else class="space-y-2.5">
+          <button @click="confirmAge"
+                  class="w-full py-3 rounded-full text-xs font-semibold text-white bg-[#0071E3] hover:bg-[#0077ED] transition-all shadow-md">
+            我已年满 18 周岁并知悉法规
+          </button>
+          <button @click="rejectAge"
+                  class="w-full py-2.5 rounded-full text-xs font-medium border transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                  style="border-color: var(--theme-border); color: var(--theme-subtext);">
+            未满 18 周岁
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 1. 顶部置顶导航栏 (48px 高度，半透明毛玻璃) -->
+    <header class="sticky top-0 z-50 h-12 w-full backdrop-blur-md border-b transition-colors duration-500 flex items-center justify-between px-6 lg:px-12"
+            style="background-color: var(--theme-nav); border-color: var(--theme-border);">
+      <div class="flex items-center space-x-3">
+        <!-- 调配烧杯/水滴 SVG 图标 -->
+        <svg class="w-5 h-5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 2v7.31M14 2v7.31M8.5 2h7M14 9.3a6.5 6.5 0 1 1-4 0"/>
+          <path d="M5.52 16h12.96"/>
+        </svg>
+        <span class="font-semibold text-sm tracking-tight tracking-wider">Make My Vape</span>
+        <span class="text-xs px-2 py-0.5 rounded-full border border-blue-500/30 text-blue-500 font-mono">1:1 计算逻辑</span>
+      </div>
+
+      <div class="flex items-center space-x-3 text-xs" style="color: var(--theme-subtext);">
+        <!-- 18+ 合规核验入口 -->
+        <button @click="openAgeModal" class="flex items-center space-x-1.5 py-1 px-2.5 rounded-full border transition-colors hover:border-amber-500/50"
+                style="border-color: var(--theme-border); background-color: var(--theme-card-sec); color: var(--theme-text);">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+          <span>18+ 合规核验</span>
+        </button>
+
+        <!-- 自动跟随系统状态指示器 -->
+        <div class="flex items-center space-x-1.5 py-1 px-2.5 rounded-full border" style="border-color: var(--theme-border); background-color: var(--theme-card-sec);">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+          </span>
+          <span class="hidden sm:inline">系统外观自适应</span>
+          <span class="sm:hidden">自适应</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 2. Hero 区域 (经典 Apple 居中对称、大字体与留白) -->
+    <section class="w-full text-center py-20 lg:py-28 px-4 flex flex-col items-center justify-center reveal-on-scroll">
+      <!-- 极细小胶囊标签 -->
+      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium mb-6 border"
+           style="border-color: var(--theme-border); background-color: var(--theme-card);">
+        <span class="text-blue-500">●</span>
+        <span style="color: var(--theme-subtext);">电子烟液配比计算工具</span>
+      </div>
+
+      <!-- 超大号主标题，带金属渐变文字 -->
+      <h1 class="text-4xl sm:text-6xl lg:text-7xl font-semibold tracking-tight max-w-4xl leading-[1.1] mb-6">
+        电子烟液配比计算<br>
+        <span class="bg-gradient-to-r from-blue-500 via-indigo-400 to-teal-400 bg-clip-text text-transparent">成分比例与克重换算台</span>
+      </h1>
+
+      <p class="text-base sm:text-lg max-w-2xl mx-auto leading-relaxed mb-10" style="color: var(--theme-subtext);">
+        采用 MakeMyVape 的物理计算逻辑。VG 密度按 1.26 g/ml 计算，PG 与稀释剂按 1.00 g/ml 计算，支持按成分比例换算体积、克重与滴数，并检验基底平衡。
+      </p>
+
+      <div class="flex items-center space-x-4">
+        <a href="#workbench"
+           class="px-7 py-3 rounded-full text-sm font-medium text-white bg-[#0071E3] hover:bg-[#0077ED] shadow-lg shadow-blue-500/25 transition-all duration-300 hover:scale-105 active:scale-95 flex items-center space-x-2">
+          <span>进入计算台</span>
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+        <button @click="resetToDefault"
+                class="px-5 py-3 rounded-full text-sm font-medium border transition-all duration-300 hover:scale-105 active:scale-95"
+                style="border-color: var(--theme-border); background-color: var(--theme-card);">
+          重置默认参数
+        </button>
+      </div>
+    </section>
+
+    <!-- 3. 主工作台：Apple Bento Grid (便当盒网格) 布局 -->
+    <main id="workbench" class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+
+      <!-- 全局常驻合规与法律免责通栏 (不可关闭) -->
+      <section class="reveal-on-scroll rounded-3xl p-6 sm:p-7 border mb-8 bento-card transition-all"
+               style="background-color: var(--theme-card); border-color: rgba(245, 158, 11, 0.25);">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between pb-4 border-b mb-4 gap-2"
+             style="border-color: var(--theme-border);">
+          <div class="flex items-center space-x-2.5">
+            <div class="w-7 h-7 rounded-full bg-amber-500/15 text-amber-500 flex items-center justify-center font-bold text-xs">
+              !
+            </div>
+            <h2 class="text-sm sm:text-base font-bold tracking-tight">
+              中国大陆电子烟政策法规与合规须知
+            </h2>
+          </div>
+          <span class="text-[11px] font-mono px-2.5 py-1 rounded-full border border-amber-500/30 text-amber-600 dark:text-amber-400">
+            GB 41700-2022 规范参考
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed" style="color: var(--theme-subtext);">
+          <div class="space-y-2.5">
+            <div class="flex items-start space-x-2">
+              <span class="font-bold text-amber-500 mt-0.5">•</span>
+              <div>
+                <strong class="font-semibold" style="color: var(--theme-text);">禁止非烟草口味与注油设备</strong>：
+                《电子烟管理办法》第二十六条规定，禁止销售除烟草口味外的调味电子烟，禁止销售可自行添加雾化物的电子烟。
+              </div>
+            </div>
+            <div class="flex items-start space-x-2">
+              <span class="font-bold text-amber-500 mt-0.5">•</span>
+              <div>
+                <strong class="font-semibold" style="color: var(--theme-text);">未成年人保护规定</strong>：
+                《中华人民共和国未成年人保护法》第五十八条与五十九条规定，严禁向未成年人销售电子烟，劝阻青少年吸电子烟，禁止中小学生吸电子烟。
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2.5">
+            <div class="flex items-start space-x-2">
+              <span class="font-bold text-amber-500 mt-0.5">•</span>
+              <div>
+                <strong class="font-semibold" style="color: var(--theme-text);">国标理化指标参考 (GB 41700-2022)</strong>：
+                国家标准规定，雾化物中的烟碱（尼古丁）浓度不应高于 20 mg/g（约 20 mg/ml），烟碱总量不高于 200 mg，添加剂需符合允许使用物质目录。
+              </div>
+            </div>
+            <div class="flex items-start space-x-2">
+              <span class="font-bold text-amber-500 mt-0.5">•</span>
+              <div>
+                <strong class="font-semibold" style="color: var(--theme-text);">工具定位与免责声明</strong>：
+                本站仅供物理比重换算与学术研究模拟，不销售任何商品。严禁用于非法生产、配置、分装或流通销售。
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- 左侧输入区：占 7 列 -->
+        <div class="lg:col-span-7 space-y-6">
+
+          <!-- Bento Card 1: 基础目标与配比设定 -->
+          <div class="reveal-on-scroll rounded-3xl p-6 sm:p-8 border shadow-sm transition-all duration-500 hover:shadow-xl bento-card"
+               style="background-color: var(--theme-card); border-color: var(--theme-border);">
+            <div class="flex items-center justify-between pb-5 border-b mb-6" style="border-color: var(--theme-border);">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center font-bold text-sm">1</div>
+                <div>
+                  <h2 class="text-lg font-semibold tracking-tight">配方与目标比例</h2>
+                  <p class="text-xs" style="color: var(--theme-subtext);">Recipe Details & Target Ratio</p>
+                </div>
+              </div>
+              <span class="text-xs font-mono px-2.5 py-1 rounded-full border" style="border-color: var(--theme-border); color: var(--theme-subtext);">Step 1</span>
+            </div>
+
+            <!-- 配方名称 -->
+            <div class="mb-6">
+              <label class="block text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--theme-subtext);">
+                配方名称 (Recipe Name)
+              </label>
+              <input type="text" v-model="recipe.name" placeholder="例如：中式经典烤烟配方 (Classic Tobacco Specimen)"
+                     class="w-full px-4 py-3 rounded-xl border text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                     style="background-color: var(--theme-input-bg); border-color: var(--theme-border); color: var(--theme-text);">
+            </div>
+
+            <!-- 调配总量 -->
+            <div class="mb-6">
+              <div class="flex justify-between items-center mb-2">
+                <label class="text-xs font-medium uppercase tracking-wider" style="color: var(--theme-subtext);">
+                  调配总量 (Amount to Make)
+                </label>
+                <span class="font-mono text-sm font-semibold text-blue-500">{{ recipe.amountToMake }} ml</span>
+              </div>
+              
+              <div class="flex items-center space-x-3">
+                <div class="flex items-center rounded-xl border overflow-hidden" style="border-color: var(--theme-border); background-color: var(--theme-input-bg);">
+                  <button @click="changeAmount(-5)" class="px-3.5 py-2 hover:bg-black/10 dark:hover:bg-white/10 text-base font-bold transition-colors">－</button>
+                  <input type="number" v-model.number="recipe.amountToMake" min="1" max="2000"
+                         class="w-20 text-center font-mono text-sm font-semibold py-2 bg-transparent focus:outline-none">
+                  <button @click="changeAmount(5)" class="px-3.5 py-2 hover:bg-black/10 dark:hover:bg-white/10 text-base font-bold transition-colors">＋</button>
+                </div>
+                <!-- 常用容量快捷按钮 -->
+                <div class="flex flex-wrap gap-1.5 flex-1">
+                  <button v-for="amt in [10, 30, 60, 100, 120]" :key="amt"
+                          @click="recipe.amountToMake = amt"
+                          :class="{'border-blue-500 text-blue-500 font-semibold bg-blue-500/10': recipe.amountToMake === amt}"
+                          class="px-2.5 py-1.5 text-xs rounded-lg border transition-all hover:border-blue-400"
+                          style="border-color: var(--theme-border);">
+                    {{ amt }}ml
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 目标 PG / VG 比例滑动条 -->
+            <div class="mb-6">
+              <div class="flex justify-between items-baseline mb-2">
+                <label class="text-xs font-medium uppercase tracking-wider" style="color: var(--theme-subtext);">
+                  目标成品 PG / VG 比例 (%)
+                </label>
+                <div class="font-mono text-sm">
+                  <span class="font-semibold text-teal-400">{{ recipe.pg }}% PG</span>
+                  <span class="mx-1" style="color: var(--theme-subtext);">/</span>
+                  <span class="font-semibold text-blue-500">{{ recipe.vg }}% VG</span>
+                </div>
+              </div>
+
+              <input type="range" min="0" max="100" step="1" v-model.number="recipe.pg" @input="recipe.vg = 100 - recipe.pg" class="w-full">
+              
+              <!-- 快捷预设按钮 -->
+              <div class="flex justify-between items-center text-xs mt-3">
+                <span style="color: var(--theme-subtext);">常用比例：</span>
+                <div class="flex space-x-1.5">
+                  <button @click="setPgVg(50, 50)" :class="{'border-blue-500 text-blue-500 font-bold': recipe.pg === 50}" class="px-2 py-1 rounded-md border text-xs" style="border-color: var(--theme-border);">50/50 口吸</button>
+                  <button @click="setPgVg(40, 60)" :class="{'border-blue-500 text-blue-500 font-bold': recipe.pg === 40}" class="px-2 py-1 rounded-md border text-xs" style="border-color: var(--theme-border);">60VG 适中</button>
+                  <button @click="setPgVg(30, 70)" :class="{'border-blue-500 text-blue-500 font-bold': recipe.pg === 30}" class="px-2 py-1 rounded-md border text-xs" style="border-color: var(--theme-border);">70VG 常见</button>
+                  <button @click="setPgVg(0, 100)" :class="{'border-blue-500 text-blue-500 font-bold': recipe.pg === 0}" class="px-2 py-1 rounded-md border text-xs" style="border-color: var(--theme-border);">纯VG</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 额外稀释剂 (如去离子水 / 溶剂) -->
+            <div class="pt-4 border-t flex items-center justify-between" style="border-color: var(--theme-border);">
+              <div>
+                <span class="text-xs font-medium" style="color: var(--theme-text);">额外稀释剂 (Extra Diluent)</span>
+                <p class="text-[11px]" style="color: var(--theme-subtext);">如去离子水，计算比重为 1.0 g/ml</p>
+              </div>
+              <div class="flex items-center space-x-1 font-mono text-xs">
+                <input type="number" min="0" max="30" v-model.number="recipe.extraDiluent"
+                       class="w-14 text-center px-2 py-1 rounded-lg border font-semibold"
+                       style="background-color: var(--theme-input-bg); border-color: var(--theme-border);">
+                <span>%</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bento Card 2: 尼古丁基质设定 -->
+          <div class="reveal-on-scroll rounded-3xl p-6 sm:p-8 border shadow-sm transition-all duration-500 hover:shadow-xl bento-card"
+               style="background-color: var(--theme-card); border-color: var(--theme-border);">
+            <div class="flex items-center justify-between pb-5 border-b mb-6" style="border-color: var(--theme-border);">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-bold text-sm">2</div>
+                <div>
+                  <h2 class="text-lg font-semibold tracking-tight">尼古丁基质设定</h2>
+                  <p class="text-xs" style="color: var(--theme-subtext);">Nicotine Base & Target Strength</p>
+                </div>
+              </div>
+              <span class="text-xs font-mono px-2.5 py-1 rounded-full border" style="border-color: var(--theme-border); color: var(--theme-subtext);">Step 2</span>
+            </div>
+
+            <!-- 尼古丁基液浓度 -->
+            <div class="mb-6">
+              <div class="flex justify-between items-center mb-2">
+                <label class="text-xs font-medium uppercase tracking-wider" style="color: var(--theme-subtext);">
+                  现有尼古丁原液浓度 (Base Strength)
+                </label>
+                <span class="font-mono text-sm font-semibold text-indigo-400">{{ recipe.nicotineBaseStrength }} mg/ml</span>
+              </div>
+
+              <!-- 快捷选择胶囊 -->
+              <div class="flex flex-wrap gap-2 mb-3">
+                <button v-for="st in [0, 18, 20, 36, 72, 100]" :key="st"
+                        @click="recipe.nicotineBaseStrength = st"
+                        :class="{'border-indigo-500 text-indigo-500 font-bold bg-indigo-500/10': recipe.nicotineBaseStrength === st}"
+                        class="px-3 py-1.5 text-xs rounded-full border transition-all hover:border-indigo-400"
+                        style="border-color: var(--theme-border);">
+                  {{ st === 0 ? '0mg (无尼古丁)' : st + 'mg' }}
+                </button>
+              </div>
+
+              <input type="range" min="0" max="100" step="1" v-model.number="recipe.nicotineBaseStrength" class="w-full">
+            </div>
+
+            <!-- 尼古丁基底类型 (PG / VG 载体) -->
+            <div class="mb-6" v-if="recipe.nicotineBaseStrength > 0">
+              <label class="block text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--theme-subtext);">
+                尼古丁基液基底载体 (Nicotine Base Carrier)
+              </label>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button @click="setNicotineBase(100, 0)"
+                        :class="{'border-indigo-500 text-indigo-500 font-bold bg-indigo-500/10': recipe.nicotineBasePg === 100 && recipe.nicotineBaseVg === 0}"
+                        class="px-3 py-2 text-xs rounded-xl border text-center transition-all hover:border-indigo-400"
+                        style="border-color: var(--theme-border);">
+                  100% PG
+                </button>
+                <button @click="setNicotineBase(0, 100)"
+                        :class="{'border-indigo-500 text-indigo-500 font-bold bg-indigo-500/10': recipe.nicotineBasePg === 0 && recipe.nicotineBaseVg === 100}"
+                        class="px-3 py-2 text-xs rounded-xl border text-center transition-all hover:border-indigo-400"
+                        style="border-color: var(--theme-border);">
+                  100% VG
+                </button>
+                <button @click="setNicotineBase(50, 50)"
+                        :class="{'border-indigo-500 text-indigo-500 font-bold bg-indigo-500/10': recipe.nicotineBasePg === 50 && recipe.nicotineBaseVg === 50}"
+                        class="px-3 py-2 text-xs rounded-xl border text-center transition-all hover:border-indigo-400"
+                        style="border-color: var(--theme-border);">
+                  50/50
+                </button>
+                <button @click="setNicotineBase(30, 70)"
+                        :class="{'border-indigo-500 text-indigo-500 font-bold bg-indigo-500/10': recipe.nicotineBasePg === 30 && recipe.nicotineBaseVg === 70}"
+                        class="px-3 py-2 text-xs rounded-xl border text-center transition-all hover:border-indigo-400"
+                        style="border-color: var(--theme-border);">
+                  70VG / 30PG
+                </button>
+              </div>
+            </div>
+
+            <!-- 目标成品尼古丁浓度 -->
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <label class="text-xs font-medium uppercase tracking-wider" style="color: var(--theme-subtext);">
+                  期望成品尼古丁浓度 (Desired Strength)
+                </label>
+                <div class="flex items-center space-x-2">
+                  <span v-if="recipe.desiredNicotine > 20" class="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-500">
+                    注：国标限值 ≤ 20mg/g
+                  </span>
+                  <span class="font-mono text-sm font-semibold text-indigo-400">{{ recipe.desiredNicotine }} mg/ml</span>
+                </div>
+              </div>
+
+              <!-- 快捷选择胶囊 -->
+              <div class="flex flex-wrap gap-2 mb-3">
+                <button v-for="d in [0, 3, 6, 9, 12, 20]" :key="d"
+                        @click="recipe.desiredNicotine = d"
+                        :class="{'border-indigo-500 text-indigo-500 font-bold bg-indigo-500/10': recipe.desiredNicotine === d}"
+                        class="px-3 py-1.5 text-xs rounded-full border transition-all hover:border-indigo-400"
+                        style="border-color: var(--theme-border);">
+                  {{ d }}mg
+                </button>
+              </div>
+
+              <input type="range" min="0" :max="recipe.nicotineBaseStrength > 0 ? Math.min(30, recipe.nicotineBaseStrength) : 0" step="0.5"
+                     v-model.number="recipe.desiredNicotine" class="w-full">
+            </div>
+
+          </div>
+
+          <!-- Bento Card 3: 香精组合清单 -->
+          <div class="reveal-on-scroll rounded-3xl p-6 sm:p-8 border shadow-sm transition-all duration-500 hover:shadow-xl bento-card"
+               style="background-color: var(--theme-card); border-color: var(--theme-border);">
+            <div class="flex items-center justify-between pb-5 border-b mb-6" style="border-color: var(--theme-border);">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-full bg-teal-500/10 text-teal-500 flex items-center justify-center font-bold text-sm">3</div>
+                <div>
+                  <h2 class="text-lg font-semibold tracking-tight">香精组合 (Flavours)</h2>
+                  <p class="text-xs" style="color: var(--theme-subtext);">Flavour Concentrates & Ratios</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="text-xs font-mono font-semibold" :class="totalFlavourPercentage > 25 ? 'text-amber-500' : 'text-teal-400'">
+                  总香精占比: {{ totalFlavourPercentage.toFixed(1) }}%
+                </span>
+              </div>
+            </div>
+
+            <!-- 香精条目动态列表 -->
+            <div class="space-y-3 mb-6">
+              <div v-for="(flavour, index) in recipe.flavours" :key="index"
+                   class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3.5 rounded-2xl border transition-all duration-300"
+                   style="background-color: var(--theme-input-bg); border-color: var(--theme-border);">
+                
+                <!-- 序号与名称输入 -->
+                <div class="flex items-center space-x-2 flex-1">
+                  <span class="text-xs font-mono px-2 py-1 rounded-md opacity-60">#{{ index + 1 }}</span>
+                  <input type="text" v-model="flavour.name" placeholder="香精或提取物名称 (如: 烤烟提取物)"
+                         class="w-full bg-transparent text-sm font-medium focus:outline-none placeholder-gray-400">
+                </div>
+
+                <!-- 比例控制与基质选择 -->
+                <div class="flex items-center justify-between sm:justify-end space-x-3">
+                  <!-- 百分比输入与步进 -->
+                  <div class="flex items-center rounded-lg border overflow-hidden" style="border-color: var(--theme-border); background-color: var(--theme-card);">
+                    <button @click="flavour.percentage = Math.max(0, flavour.percentage - 0.5)" class="px-2 py-1 text-xs hover:bg-black/10 dark:hover:bg-white/10 font-bold">－</button>
+                    <input type="number" step="0.5" min="0" max="50" v-model.number="flavour.percentage"
+                           class="w-14 text-center font-mono text-xs font-semibold py-1 bg-transparent focus:outline-none">
+                    <span class="text-xs pr-1.5 opacity-60">%</span>
+                    <button @click="flavour.percentage = Math.min(50, flavour.percentage + 0.5)" class="px-2 py-1 text-xs hover:bg-black/10 dark:hover:bg-white/10 font-bold">＋</button>
+                  </div>
+
+                  <!-- 基质类型 PG / VG -->
+                  <div class="flex rounded-lg border overflow-hidden text-xs" style="border-color: var(--theme-border);">
+                    <button @click="flavour.baseType = 'pg'"
+                            :class="flavour.baseType === 'pg' ? 'bg-blue-500 text-white font-semibold' : 'bg-transparent text-gray-400'"
+                            class="px-2 py-1 transition-colors">PG</button>
+                    <button @click="flavour.baseType = 'vg'"
+                            :class="flavour.baseType === 'vg' ? 'bg-teal-500 text-white font-semibold' : 'bg-transparent text-gray-400'"
+                            class="px-2 py-1 transition-colors">VG</button>
+                  </div>
+
+                  <!-- 删除按钮 -->
+                  <button @click="removeFlavour(index)"
+                          class="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors" title="删除该香精">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 添加香精按钮 -->
+            <button @click="addFlavour"
+                    class="w-full py-3 rounded-2xl border-2 border-dashed flex items-center justify-center space-x-2 text-sm font-medium transition-all hover:border-blue-500 hover:text-blue-500"
+                    style="border-color: var(--theme-border);">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              <span>添加香精条目 (Add Flavour)</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- 右侧输出区：占 5 列 (核心突出大卡片 + 本地配方库) -->
+        <div class="lg:col-span-5 space-y-6">
+
+          <!-- Bento Card 4: 实时调配结果清单与配方卡片 -->
+          <div id="recipeCard"
+               class="reveal-on-scroll rounded-3xl p-6 sm:p-8 border shadow-lg transition-all duration-500 hover:shadow-2xl bento-card relative overflow-hidden"
+               style="background-color: var(--theme-card); border-color: var(--theme-border);">
+            
+            <!-- 顶部装饰光泽 (Apple 风格暗夜光泽) -->
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="flex items-center justify-between pb-4 border-b mb-6" style="border-color: var(--theme-border);">
+              <div>
+                <span class="text-[11px] font-mono uppercase tracking-widest text-blue-500 font-semibold">Master Recipe</span>
+                <h2 class="text-xl font-bold tracking-tight">{{ recipe.name || '调配配方' }}</h2>
+                <p class="text-xs mt-0.5" style="color: var(--theme-subtext);">
+                  {{ recipe.amountToMake }}ml · {{ recipe.pg }}PG/{{ recipe.vg }}VG · {{ recipe.desiredNicotine }}mg
+                </p>
+              </div>
+              <span class="w-3 h-3 rounded-full" :class="isRecipeValid ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'"></span>
+            </div>
+
+            <!-- 负数报警提示条 (如果 PG/VG 不足) -->
+            <div v-if="!isRecipeValid" class="mb-5 p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-500 text-xs leading-relaxed flex items-start space-x-2.5">
+              <svg class="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div>
+                <span class="font-semibold block mb-0.5">配方比例超出物理边界：</span>
+                当前添加的香精与尼古丁中自带的 PG 或 VG 已超过设定的目标成品比例。请调高对应的 PG/VG 滑块，或适当减少香精用量。
+              </div>
+            </div>
+
+            <!-- 调配清单核心表格 -->
+            <div class="overflow-x-auto mb-6">
+              <table class="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr class="border-b" style="border-color: var(--theme-border); color: var(--theme-subtext);">
+                    <th class="py-2.5 font-medium">原料成分</th>
+                    <th class="py-2.5 text-right font-medium">毫升(ml)</th>
+                    <th class="py-2.5 text-right font-medium">克重(g)</th>
+                    <th class="py-2.5 text-right font-medium">滴数</th>
+                    <th class="py-2.5 text-right font-medium">比例</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y" style="border-color: var(--theme-border);">
+                  <tr v-for="(item, idx) in calculationResults" :key="idx"
+                      :class="{'bg-red-500/10 text-red-400 font-bold': item.ml < 0}"
+                      class="transition-colors hover:bg-black/5 dark:hover:bg-white/5">
+                    <td class="py-3 font-sans font-medium flex items-center space-x-1.5">
+                      <span class="w-2 h-2 rounded-full"
+                            :class="{
+                              'bg-teal-400': item.name.includes('PG'),
+                              'bg-blue-500': item.name.includes('VG'),
+                              'bg-indigo-400': item.name.includes('尼古丁') || item.name.includes('Nicotine'),
+                              'bg-amber-400': item.name.includes('香精') || item.isFlavour,
+                              'bg-purple-400': item.name.includes('稀释剂')
+                            }"></span>
+                      <span class="truncate max-w-[130px]">{{ item.name }}</span>
+                    </td>
+                    <td class="py-3 text-right font-semibold">{{ item.ml.toFixed(2) }}</td>
+                    <td class="py-3 text-right font-semibold text-blue-400">{{ item.grams.toFixed(2) }}g</td>
+                    <td class="py-3 text-right opacity-70">{{ Math.round(item.drops) }}</td>
+                    <td class="py-3 text-right font-semibold">{{ item.percentage.toFixed(1) }}%</td>
+                  </tr>
+                </tbody>
+                <!-- 总计汇总行 -->
+                <tfoot>
+                  <tr class="border-t-2 font-bold text-sm" style="border-color: var(--theme-border);">
+                    <td class="pt-4 font-sans">合计 (Total)</td>
+                    <td class="pt-4 text-right">{{ totalResult.ml.toFixed(2) }}ml</td>
+                    <td class="pt-4 text-right text-blue-400">{{ totalResult.grams.toFixed(2) }}g</td>
+                    <td class="pt-4 text-right opacity-70">{{ Math.round(totalResult.drops) }}</td>
+                    <td class="pt-4 text-right">100%</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <!-- 法定警语与免责印戳 (卡片导出及打印时均可见) -->
+            <div class="mt-4 pt-3.5 border-t border-dashed" style="border-color: var(--theme-border);">
+              <div class="text-[11px] leading-relaxed" style="color: var(--theme-subtext);">
+                <div class="text-amber-600 dark:text-amber-400 font-semibold mb-0.5">
+                  法定警语：吸电子烟有害健康 · 请勿在禁烟场所吸电子烟
+                </div>
+                <div class="font-medium">
+                  劝阻青少年吸电子烟 禁止中小学生吸电子烟
+                </div>
+                <div class="mt-1 text-[10px] opacity-75">
+                  [学术模拟演示 · 依据《电子烟管理办法》及 GB 41700-2022，严禁非法调配、生产与流通销售]
+                </div>
+              </div>
+            </div>
+
+            <!-- 操作按钮组 (保存、导出图片、打印) -->
+            <div class="space-y-2.5 pt-4 border-t no-print" style="border-color: var(--theme-border);">
+              <button @click="saveRecipeToLocal" :disabled="!isRecipeValid"
+                      class="w-full py-3 rounded-full text-xs font-semibold text-white bg-[#0071E3] hover:bg-[#0077ED] disabled:opacity-40 disabled:cursor-not-allowed shadow-md transition-all duration-300 flex items-center justify-center space-x-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <span>保存到本地配方库 (Save Recipe)</span>
+              </button>
+
+              <div class="grid grid-cols-2 gap-2">
+                <button @click="exportRecipeCardImage" :disabled="!isRecipeValid"
+                        class="py-2.5 px-3 rounded-full text-xs font-medium border disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center space-x-1.5"
+                        style="border-color: var(--theme-border);">
+                  <svg class="w-3.5 h-3.5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                  <span>导出配方卡片图</span>
+                </button>
+
+                <button @click="printRecipe" :disabled="!isRecipeValid"
+                        class="py-2.5 px-3 rounded-full text-xs font-medium border disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center space-x-1.5"
+                        style="border-color: var(--theme-border);">
+                  <svg class="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                  <span>调配台打印 (Print)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 提示信息 Toast -->
+            <div v-if="toastMessage" class="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-blue-600 text-white text-xs shadow-xl animate-fade-in flex items-center space-x-2">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>{{ toastMessage }}</span>
+            </div>
+
+          </div>
+
+          <!-- Bento Card 5: 本地配方库 (Local Storage Vault) -->
+          <div class="reveal-on-scroll rounded-3xl p-6 sm:p-8 border shadow-sm transition-all duration-500 hover:shadow-xl bento-card no-print"
+               style="background-color: var(--theme-card); border-color: var(--theme-border);">
+            <div class="flex items-center justify-between pb-4 border-b mb-5" style="border-color: var(--theme-border);">
+              <div class="flex items-center space-x-2">
+                <svg class="w-4 h-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                <h3 class="text-sm font-semibold tracking-tight">本地配方库 (Saved Recipes)</h3>
+              </div>
+              <span class="text-xs font-mono px-2 py-0.5 rounded-full border" style="border-color: var(--theme-border); color: var(--theme-subtext);">
+                {{ savedRecipes.length }} 个配方
+              </span>
+            </div>
+
+            <!-- 空列表提示 -->
+            <div v-if="savedRecipes.length === 0" class="text-center py-8 text-xs" style="color: var(--theme-subtext);">
+              暂无已保存配方，点击上方“保存到本地配方库”即可记录当前配方。
+            </div>
+
+            <!-- 配方条目列表 -->
+            <div v-else class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+              <div v-for="(item, idx) in savedRecipes" :key="item.id"
+                   class="p-3.5 rounded-2xl border transition-all duration-300 flex items-center justify-between group hover:border-blue-500/50"
+                   style="background-color: var(--theme-input-bg); border-color: var(--theme-border);">
+                <div class="flex-1 min-w-0 pr-3">
+                  <h4 class="text-xs font-bold truncate" style="color: var(--theme-text);">{{ item.name }}</h4>
+                  <div class="flex items-center space-x-2 text-[11px] font-mono mt-0.5" style="color: var(--theme-subtext);">
+                    <span>{{ item.amountToMake }}ml</span>
+                    <span>·</span>
+                    <span>{{ item.pg }}/{{ item.vg }}</span>
+                    <span>·</span>
+                    <span>{{ item.desiredNicotine }}mg</span>
+                  </div>
+                </div>
+
+                <div class="flex items-center space-x-1.5 flex-shrink-0">
+                  <button @click="loadRecipe(item)"
+                          class="px-2.5 py-1 rounded-full text-xs font-medium text-blue-500 bg-blue-500/10 hover:bg-blue-500 hover:text-white transition-all">
+                    载入
+                  </button>
+                  <button @click="deleteSavedRecipe(idx)"
+                          class="p-1.5 text-gray-400 hover:text-red-500 transition-colors">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+
+    <!-- 4. 页脚 (Apple 极简排版与版权) -->
+    <footer class="w-full border-t py-8 text-center text-xs transition-colors duration-500 no-print"
+            style="border-color: var(--theme-border); background-color: var(--theme-card); color: var(--theme-subtext);">
+      <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center space-x-2">
+          <span>Make My Vape 调配计算</span>
+          <span>·</span>
+          <span>仅供学术模拟演示</span>
+          <span>·</span>
+          <span class="text-amber-600 dark:text-amber-400 font-medium">未成年人禁止使用</span>
+        </div>
+        <p class="font-mono text-[11px]">
+          VG 1.26 g/ml · PG 1.00 g/ml · 20 滴/ml · 遵守 GB 41700-2022 规范
+        </p>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Vue 3 核心业务逻辑实现 -->
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        // 年龄核验弹窗状态
+        const showAgeModal = ref(false);
+        const isUnderageBlocked = ref(false);
+
+        // 当前调配配方数据状态
+        const recipe = ref({
+          id: Date.now(),
+          name: '中式经典烤烟配方 (Classic Tobacco Specimen)',
+          amountToMake: 30,         // 总量 ml
+          pg: 50,                   // 目标 PG %
+          vg: 50,                   // 目标 VG %
+          extraDiluent: 0,          // 额外稀释剂 %
+          nicotineBaseStrength: 20, // 尼古丁基液浓度 mg/ml (国标常见规格 20mg)
+          nicotineBasePg: 100,      // 尼古丁基液 PG %
+          nicotineBaseVg: 0,        // 尼古丁基液 VG %
+          desiredNicotine: 3,       // 期望成品浓度 mg/ml
+          flavours: [
+            { name: '烤烟提取物 (Flue-cured Extract)', percentage: 4, baseType: 'pg' },
+            { name: '坚果香韵 (Nutty Accent)', percentage: 1.5, baseType: 'pg' }
+          ]
+        });
+
+        const savedRecipes = ref([]);
+        const toastMessage = ref('');
+
+        // 显示微提示 Toast
+        const showToast = (msg) => {
+          toastMessage.value = msg;
+          setTimeout(() => {
+            toastMessage.value = '';
+          }, 2400);
+        };
+
+        // 年龄确认
+        const confirmAge = () => {
+          showAgeModal.value = false;
+          localStorage.setItem('mmv_age_verified', 'true');
+          showToast('年龄核验通过');
+        };
+
+        // 年龄拒绝（未成年拦截）
+        const rejectAge = () => {
+          isUnderageBlocked.value = true;
+        };
+
+        // 手动打开年龄核验
+        const openAgeModal = () => {
+          isUnderageBlocked.value = false;
+          showAgeModal.value = true;
+        };
+
+        // 快捷设置 PG/VG 比例
+        const setPgVg = (pgVal, vgVal) => {
+          recipe.value.pg = pgVal;
+          recipe.value.vg = vgVal;
+        };
+
+        // 调整总量
+        const changeAmount = (delta) => {
+          const next = recipe.value.amountToMake + delta;
+          if (next >= 1 && next <= 2000) {
+            recipe.value.amountToMake = next;
+          }
+        };
+
+        // 快捷设置尼古丁基底
+        const setNicotineBase = (pg, vg) => {
+          recipe.value.nicotineBasePg = pg;
+          recipe.value.nicotineBaseVg = vg;
+        };
+
+        // 香精动态增删
+        const addFlavour = () => {
+          recipe.value.flavours.push({
+            name: '',
+            percentage: 2,
+            baseType: 'pg'
+          });
+        };
+
+        const removeFlavour = (index) => {
+          recipe.value.flavours.splice(index, 1);
+        };
+
+        // 计算总香精百分比
+        const totalFlavourPercentage = computed(() => {
+          return recipe.value.flavours.reduce((sum, f) => sum + (Number(f.percentage) || 0), 0);
+        });
+
+        // 核心数学计算模型 (1:1 严格复刻 MakeMyVape)
+        const calculationResults = computed(() => {
+          const amount = Number(recipe.value.amountToMake) || 0;
+          const extraDiluentPct = Number(recipe.value.extraDiluent) || 0;
+          
+          // 1. 额外稀释剂体积
+          const extraDiluentMl = amount * (extraDiluentPct / 100);
+          
+          // 2. 基底可调配实际容量
+          const baseAmountToMake = amount - extraDiluentMl;
+          
+          // 3. 尼古丁需求量计算
+          const nicBaseStrength = Number(recipe.value.nicotineBaseStrength) || 0;
+          const desiredNic = Number(recipe.value.desiredNicotine) || 0;
+          let nicMl = 0;
+          if (nicBaseStrength > 0 && desiredNic > 0) {
+            nicMl = baseAmountToMake * (desiredNic / nicBaseStrength);
+          }
+          const nicBasePg = Number(recipe.value.nicotineBasePg) || 0;
+          const nicBaseVg = Number(recipe.value.nicotineBaseVg) || 0;
+          const nicPgMl = nicMl * (nicBasePg / 100);
+          const nicVgMl = nicMl * (nicBaseVg / 100);
+
+          // 尼古丁基液密度：(PG比重*1.0 + VG比重*1.26)
+          const nicGramsPerMl = (nicBasePg / 100) * 1.0 + (nicBaseVg / 100) * 1.26;
+
+          // 4. 香精计算
+          let totalPgFlavoursMl = 0;
+          let totalVgFlavoursMl = 0;
+          const parsedFlavours = recipe.value.flavours.map((f, idx) => {
+            const fPct = Number(f.percentage) || 0;
+            const fMl = amount * (fPct / 100);
+            const isVg = f.baseType === 'vg';
+            const density = isVg ? 1.26 : 1.00;
+            if (isVg) {
+              totalVgFlavoursMl += fMl;
+            } else {
+              totalPgFlavoursMl += fMl;
+            }
+            return {
+              name: f.name ? `香精: ${f.name}` : `香精 #${idx + 1}`,
+              isFlavour: true,
+              ml: fMl,
+              grams: fMl * density,
+              drops: fMl * 20,
+              percentage: amount > 0 ? (fMl / amount) * 100 : 0
+            };
+          });
+
+          // 5. 目标所需总 PG 与 VG
+          const targetPgPct = Number(recipe.value.pg) || 0;
+          const targetVgPct = Number(recipe.value.vg) || 0;
+          const targetPgMl = baseAmountToMake * (targetPgPct / 100);
+          const targetVgMl = baseAmountToMake * (targetVgPct / 100);
+
+          // 6. 需额外补充的纯 PG 与 纯 VG
+          const purePgToAddMl = targetPgMl - (totalPgFlavoursMl + nicPgMl);
+          const pureVgToAddMl = targetVgMl - (totalVgFlavoursMl + nicVgMl);
+
+          // 组织结果数组
+          const results = [];
+
+          // 纯 PG
+          results.push({
+            name: 'PG (丙二醇)',
+            isFlavour: false,
+            ml: purePgToAddMl,
+            grams: purePgToAddMl * 1.0,
+            drops: purePgToAddMl * 20,
+            percentage: amount > 0 ? (purePgToAddMl / amount) * 100 : 0
+          });
+
+          // 纯 VG
+          results.push({
+            name: 'VG (植物甘油)',
+            isFlavour: false,
+            ml: pureVgToAddMl,
+            grams: pureVgToAddMl * 1.26,
+            drops: pureVgToAddMl * 20,
+            percentage: amount > 0 ? (pureVgToAddMl / amount) * 100 : 0
+          });
+
+          // 尼古丁基液 (若配置了浓度)
+          if (nicBaseStrength > 0 && desiredNic > 0) {
+            let nicLabel = '尼古丁基液';
+            if (nicBasePg === 100 && nicBaseVg === 0) nicLabel += ' (100% PG)';
+            else if (nicBasePg === 0 && nicBaseVg === 100) nicLabel += ' (100% VG)';
+            else if (nicBasePg === 50 && nicBaseVg === 50) nicLabel += ' (50/50)';
+            else nicLabel += ` (${nicBasePg}PG/${nicBaseVg}VG)`;
+
+            results.push({
+              name: nicLabel,
+              isFlavour: false,
+              ml: nicMl,
+              grams: nicMl * nicGramsPerMl,
+              drops: nicMl * 20,
+              percentage: amount > 0 ? (nicMl / amount) * 100 : 0
+            });
+          }
+
+          // 额外稀释剂 (若设置)
+          if (extraDiluentMl > 0) {
+            results.push({
+              name: '稀释剂 (去离子水/溶剂)',
+              isFlavour: false,
+              ml: extraDiluentMl,
+              grams: extraDiluentMl * 1.0,
+              drops: extraDiluentMl * 20,
+              percentage: amount > 0 ? (extraDiluentMl / amount) * 100 : 0
+            });
+          }
+
+          // 添加所有香精
+          results.push(...parsedFlavours);
+
+          return results;
+        });
+
+        // 校验配方物理可行性 (纯 PG 与 纯 VG 均不可为负)
+        const isRecipeValid = computed(() => {
+          return !calculationResults.value.some(item => item.ml < 0);
+        });
+
+        // 总计数据行
+        const totalResult = computed(() => {
+          let totalMl = 0;
+          let totalGrams = 0;
+          let totalDrops = 0;
+          calculationResults.value.forEach(item => {
+            totalMl += item.ml;
+            totalGrams += item.grams;
+            totalDrops += item.drops;
+          });
+          return {
+            ml: totalMl,
+            grams: totalGrams,
+            drops: totalDrops
+          };
+        });
+
+        // 本地配方保存
+        const saveRecipeToLocal = () => {
+          if (!isRecipeValid.value) return;
+          const copy = JSON.parse(JSON.stringify(recipe.value));
+          copy.id = Date.now();
+          savedRecipes.value.unshift(copy);
+          localStorage.setItem('mmv_saved_recipes', JSON.stringify(savedRecipes.value));
+          showToast('配方已保存至本地');
+        };
+
+        // 载入配方
+        const loadRecipe = (item) => {
+          recipe.value = JSON.parse(JSON.stringify(item));
+          showToast(`已载入配方: ${item.name}`);
+        };
+
+        // 删除本地配方
+        const deleteSavedRecipe = (index) => {
+          savedRecipes.value.splice(index, 1);
+          localStorage.setItem('mmv_saved_recipes', JSON.stringify(savedRecipes.value));
+          showToast('已删除该配方');
+        };
+
+        // 重置为默认推荐值
+        const resetToDefault = () => {
+          recipe.value = {
+            id: Date.now(),
+            name: '中式经典烤烟配方 (Classic Tobacco Specimen)',
+            amountToMake: 30,
+            pg: 50,
+            vg: 50,
+            extraDiluent: 0,
+            nicotineBaseStrength: 20,
+            nicotineBasePg: 100,
+            nicotineBaseVg: 0,
+            desiredNicotine: 3,
+            flavours: [
+              { name: '烤烟提取物 (Flue-cured Extract)', percentage: 4, baseType: 'pg' },
+              { name: '坚果香韵 (Nutty Accent)', percentage: 1.5, baseType: 'pg' }
+            ]
+          };
+          showToast('已重置为默认参数');
+        };
+
+        // 导出配方高清卡片图片 (html2canvas)
+        const exportRecipeCardImage = () => {
+          const cardEl = document.getElementById('recipeCard');
+          if (!cardEl) return;
+          showToast('正在生成配方卡片图片...');
+          
+          html2canvas(cardEl, {
+            scale: 2, // 2倍清晰度渲染
+            useCORS: true,
+            backgroundColor: null
+          }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `${recipe.value.name || '调配配方'}_${recipe.value.amountToMake}ml.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            showToast('配方卡片图片已导出');
+          }).catch(err => {
+            console.error(err);
+            showToast('卡片生成遇到问题，请重试');
+          });
+        };
+
+        // 打印功能
+        const printRecipe = () => {
+          window.print();
+        };
+
+        // 页面加载时恢复本地存储与核验状态
+        onMounted(() => {
+          // 检查年龄核验状态
+          const verified = localStorage.getItem('mmv_age_verified');
+          if (verified !== 'true') {
+            showAgeModal.value = true;
+          }
+
+          const stored = localStorage.getItem('mmv_saved_recipes');
+          if (stored) {
+            try {
+              savedRecipes.value = JSON.parse(stored);
+            } catch (e) {
+              console.error(e);
+            }
+          } else {
+            // 预存范例配方
+            savedRecipes.value = [
+              {
+                id: 1,
+                name: '中式经典烤烟 (Classic Flue-cured Tobacco)',
+                amountToMake: 30,
+                pg: 50,
+                vg: 50,
+                extraDiluent: 0,
+                nicotineBaseStrength: 20,
+                nicotineBasePg: 100,
+                nicotineBaseVg: 0,
+                desiredNicotine: 3,
+                flavours: [
+                  { name: '烤烟提取物 (Flue-cured Extract)', percentage: 5, baseType: 'pg' },
+                  { name: '香兰素与微量坚果 (Vanillin & Nutty Note)', percentage: 1.5, baseType: 'pg' }
+                ]
+              },
+              {
+                id: 2,
+                name: '清润薄荷烤烟 (Mint Flue-cured)',
+                amountToMake: 60,
+                pg: 40,
+                vg: 60,
+                extraDiluent: 0,
+                nicotineBaseStrength: 20,
+                nicotineBasePg: 100,
+                nicotineBaseVg: 0,
+                desiredNicotine: 3,
+                flavours: [
+                  { name: '烟草提取物 (Tobacco Absolute)', percentage: 6, baseType: 'pg' },
+                  { name: '薄荷脑 (Menthol Extract)', percentage: 1, baseType: 'pg' }
+                ]
+              }
+            ];
+            localStorage.setItem('mmv_saved_recipes', JSON.stringify(savedRecipes.value));
+          }
+
+          // 初始化 IntersectionObserver 实现滚动平滑淡入
+          const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('is-revealed');
+              }
+            });
+          }, { threshold: 0.1 });
+
+          document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
+        });
+
+        return {
+          showAgeModal,
+          isUnderageBlocked,
+          confirmAge,
+          rejectAge,
+          openAgeModal,
+          recipe,
+          savedRecipes,
+          toastMessage,
+          setPgVg,
+          changeAmount,
+          setNicotineBase,
+          addFlavour,
+          removeFlavour,
+          totalFlavourPercentage,
+          calculationResults,
+          isRecipeValid,
+          totalResult,
+          saveRecipeToLocal,
+          loadRecipe,
+          deleteSavedRecipe,
+          resetToDefault,
+          exportRecipeCardImage,
+          printRecipe
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
