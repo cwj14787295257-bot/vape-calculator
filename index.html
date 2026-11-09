@@ -244,7 +244,7 @@
       </h1>
 
       <p class="text-base sm:text-lg max-w-2xl mx-auto leading-relaxed mb-10" style="color: var(--theme-subtext);">
-        采用高精度物理计算逻辑。VG 密度按 1.26 g/ml 计算，PG 与稀释剂按 1.00 g/ml 计算，支持按成分比例换算体积、克重与滴数，并检验基底平衡。
+        采用高精度物理计算逻辑。VG 密度按 1.26 g/ml 计算，PG 与稀释剂按 1.00 g/ml 计算，支持按成分比例换算体积与克重，并检验基底平衡。
       </p>
 
       <div class="flex items-center space-x-4">
@@ -640,7 +640,6 @@
                     <th class="py-2.5 font-medium">原料成分</th>
                     <th class="py-2.5 text-right font-medium">毫升(ml)</th>
                     <th class="py-2.5 text-right font-medium">克重(g)</th>
-                    <th class="py-2.5 text-right font-medium">滴数</th>
                     <th class="py-2.5 text-right font-medium">比例</th>
                   </tr>
                 </thead>
@@ -654,7 +653,6 @@
                     </td>
                     <td class="py-3 text-right font-semibold">{{ item.ml.toFixed(2) }}</td>
                     <td class="py-3 text-right font-semibold text-zinc-700 dark:text-zinc-300">{{ item.grams.toFixed(2) }}g</td>
-                    <td class="py-3 text-right opacity-70">{{ Math.round(item.drops) }}</td>
                     <td class="py-3 text-right font-semibold">{{ item.percentage.toFixed(1) }}%</td>
                   </tr>
                 </tbody>
@@ -664,7 +662,6 @@
                     <td class="pt-4 font-sans">合计 (Total)</td>
                     <td class="pt-4 text-right">{{ totalResult.ml.toFixed(2) }}ml</td>
                     <td class="pt-4 text-right text-zinc-900 dark:text-white">{{ totalResult.grams.toFixed(2) }}g</td>
-                    <td class="pt-4 text-right opacity-70">{{ Math.round(totalResult.drops) }}</td>
                     <td class="pt-4 text-right">100%</td>
                   </tr>
                 </tfoot>
@@ -784,7 +781,7 @@
           <span class="text-amber-600 dark:text-amber-400 font-medium">未成年人禁止使用</span>
         </div>
         <p class="font-mono text-[11px]">
-          VG 1.26 g/ml · PG 1.00 g/ml · 20 滴/ml · 遵守 GB 41700-2022 规范
+          VG 1.26 g/ml · PG 1.00 g/ml · 遵守 GB 41700-2022 规范
         </p>
       </div>
     </footer>
@@ -813,7 +810,13 @@
           nicotineBasePg: 100,      // 尼古丁基液 PG %
           nicotineBaseVg: 0,        // 尼古丁基液 VG %
           desiredNicotine: 0,       // 期望成品浓度 mg/ml (初始 0mg)
-          flavours: []              // 空白纯净初始态
+          flavours: [
+            {
+              name: '示例香精',
+              percentage: 5,
+              baseType: 'pg'
+            }
+          ]
         });
 
         const savedRecipes = ref([]);
@@ -862,7 +865,7 @@
         // 香精动态增删
         const addFlavour = () => {
           recipe.value.flavours.push({
-            name: '',
+            name: '示例香精',
             percentage: 2,
             baseType: 'pg'
           });
@@ -921,7 +924,6 @@
               isFlavour: true,
               ml: fMl,
               grams: fMl * density,
-              drops: fMl * 20,
               percentage: amount > 0 ? (fMl / amount) * 100 : 0
             };
           });
@@ -945,7 +947,6 @@
             isFlavour: false,
             ml: purePgToAddMl,
             grams: purePgToAddMl * 1.0,
-            drops: purePgToAddMl * 20,
             percentage: amount > 0 ? (purePgToAddMl / amount) * 100 : 0
           });
 
@@ -955,7 +956,6 @@
             isFlavour: false,
             ml: pureVgToAddMl,
             grams: pureVgToAddMl * 1.26,
-            drops: pureVgToAddMl * 20,
             percentage: amount > 0 ? (pureVgToAddMl / amount) * 100 : 0
           });
 
@@ -972,7 +972,6 @@
               isFlavour: false,
               ml: nicMl,
               grams: nicMl * nicGramsPerMl,
-              drops: nicMl * 20,
               percentage: amount > 0 ? (nicMl / amount) * 100 : 0
             });
           }
@@ -984,7 +983,6 @@
               isFlavour: false,
               ml: extraDiluentMl,
               grams: extraDiluentMl * 1.0,
-              drops: extraDiluentMl * 20,
               percentage: amount > 0 ? (extraDiluentMl / amount) * 100 : 0
             });
           }
@@ -1004,16 +1002,13 @@
         const totalResult = computed(() => {
           let totalMl = 0;
           let totalGrams = 0;
-          let totalDrops = 0;
           calculationResults.value.forEach(item => {
             totalMl += item.ml;
             totalGrams += item.grams;
-            totalDrops += item.drops;
           });
           return {
             ml: totalMl,
-            grams: totalGrams,
-            drops: totalDrops
+            grams: totalGrams
           };
         });
 
@@ -1053,7 +1048,13 @@
             nicotineBasePg: 100,
             nicotineBaseVg: 0,
             desiredNicotine: 0,
-            flavours: []
+            flavours: [
+              {
+                name: '示例香精',
+                percentage: 5,
+                baseType: 'pg'
+              }
+            ]
           };
           showToast('已重置为默认参数');
         };
