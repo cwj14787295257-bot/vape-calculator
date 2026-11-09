@@ -348,33 +348,26 @@
                      style="background-color: var(--theme-input-bg); border-color: var(--theme-border); color: var(--theme-text);">
             </div>
 
-            <!-- 调配总量 -->
-            <div class="mb-6">
-              <div class="flex justify-between items-center mb-2">
+            <!-- 推算成品总量 (由香精用量与目标比例自动反推) -->
+            <div class="mb-6 p-4 rounded-2xl border transition-all"
+                 style="background-color: var(--theme-input-bg); border-color: var(--theme-border);">
+              <div class="flex items-center justify-between mb-1.5">
                 <label class="text-xs font-medium uppercase tracking-wider" style="color: var(--theme-subtext);">
-                  调配总量 (Amount to Make)
+                  推算成品总量 (Calculated Total)
                 </label>
-                <span class="font-mono text-sm font-semibold" style="color: var(--theme-text);">{{ recipe.amountToMake }} ml</span>
+                <span class="text-[11px] font-mono px-2 py-0.5 rounded-full border border-blue-500/30 text-blue-500 bg-blue-500/10">
+                  香精用量 ÷ 稀释比
+                </span>
               </div>
-              
-              <div class="flex items-center space-x-3">
-                <div class="flex items-center rounded-xl border overflow-hidden" style="border-color: var(--theme-border); background-color: var(--theme-input-bg);">
-                  <button @click="changeAmount(-5)" class="px-3.5 py-2 hover:bg-black/10 dark:hover:bg-white/10 text-base font-bold transition-colors">－</button>
-                  <input type="number" v-model.number="recipe.amountToMake" min="1" max="2000"
-                         class="w-20 text-center font-mono text-sm font-semibold py-2 bg-transparent focus:outline-none">
-                  <button @click="changeAmount(5)" class="px-3.5 py-2 hover:bg-black/10 dark:hover:bg-white/10 text-base font-bold transition-colors">＋</button>
-                </div>
-                <!-- 常用容量快捷按钮 -->
-                <div class="flex flex-wrap gap-1.5 flex-1">
-                  <button v-for="amt in [10, 30, 60, 100, 120]" :key="amt"
-                          @click="recipe.amountToMake = amt"
-                          :class="{'border-blue-500 text-blue-500 font-semibold bg-blue-500/10': recipe.amountToMake === amt}"
-                          class="px-2.5 py-1.5 text-xs rounded-lg border transition-all hover:border-blue-400"
-                          style="border-color: var(--theme-border);">
-                    {{ amt }}ml
-                  </button>
-                </div>
+              <div class="flex items-baseline space-x-2">
+                <span class="font-mono text-2xl font-bold tracking-tight" style="color: var(--theme-text);">
+                  {{ computedAmountToMake > 0 ? computedAmountToMake.toFixed(2) : '--' }}
+                </span>
+                <span class="text-sm font-semibold text-zinc-400">ml</span>
               </div>
+              <p class="text-[11px] mt-1.5 leading-relaxed" style="color: var(--theme-subtext);">
+                当前香精总用量 <strong style="color: var(--theme-text);">{{ totalFlavourMl.toFixed(2) }} ml</strong>，总香精占比 <strong style="color: var(--theme-text);">{{ totalFlavourPercentage.toFixed(1) }}%</strong>。
+              </p>
             </div>
 
             <!-- 目标 PG / VG 比例滑动条 -->
@@ -533,57 +526,80 @@
                 </div>
               </div>
               <div class="text-right">
-                <span class="text-xs font-mono font-semibold" :class="totalFlavourPercentage > 25 ? 'text-amber-500' : ''" style="color: var(--theme-text);">
-                  总香精占比: {{ totalFlavourPercentage.toFixed(1) }}%
-                </span>
+                <div class="text-xs font-mono font-semibold" :class="totalFlavourPercentage > 25 ? 'text-amber-500' : ''" style="color: var(--theme-text);">
+                  总用量: {{ totalFlavourMl.toFixed(2) }}ml · 占比: {{ totalFlavourPercentage.toFixed(1) }}%
+                </div>
+                <div class="text-[11px] font-mono text-blue-500 font-medium mt-0.5">
+                  反推总量: {{ computedAmountToMake > 0 ? computedAmountToMake.toFixed(1) + 'ml' : '--' }}
+                </div>
               </div>
             </div>
 
             <!-- 空香精提示 -->
             <div v-if="recipe.flavours.length === 0" class="text-center py-6 text-xs" style="color: var(--theme-subtext);">
-              暂未添加香精条目。点击下方按钮添加香精成分。
+              暂未添加香精条目。点击下方按钮添加香精用量与目标占比以反推总量。
             </div>
 
-            <!-- 香精条目动态列表 -->
+            <!-- 香精条目动态列表 (双行分层排版) -->
             <div v-else class="space-y-3 mb-6">
               <div v-for="(flavour, index) in recipe.flavours" :key="index"
-                   class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3.5 rounded-2xl border transition-all duration-300"
+                   class="p-4 rounded-2xl border transition-all duration-300 space-y-3"
                    style="background-color: var(--theme-input-bg); border-color: var(--theme-border);">
                 
-                <!-- 序号与名称输入 -->
-                <div class="flex items-center space-x-2 flex-1">
-                  <span class="text-xs font-mono px-2 py-1 rounded-md opacity-60">#{{ index + 1 }}</span>
-                  <input type="text" v-model="flavour.name" placeholder="请输入香精或提取物名称"
-                         class="w-full bg-transparent text-sm font-medium focus:outline-none placeholder-gray-400">
-                </div>
-
-                <!-- 比例控制与基质选择 -->
-                <div class="flex items-center justify-between sm:justify-end space-x-3">
-                  <!-- 百分比输入与步进 -->
-                  <div class="flex items-center rounded-lg border overflow-hidden" style="border-color: var(--theme-border); background-color: var(--theme-card);">
-                    <button @click="flavour.percentage = Math.max(0, flavour.percentage - 0.5)" class="px-2 py-1 text-xs hover:bg-black/10 dark:hover:bg-white/10 font-bold">－</button>
-                    <input type="number" step="0.5" min="0" max="50" v-model.number="flavour.percentage"
-                           class="w-14 text-center font-mono text-xs font-semibold py-1 bg-transparent focus:outline-none">
-                    <span class="text-xs pr-1.5 opacity-60">%</span>
-                    <button @click="flavour.percentage = Math.min(50, flavour.percentage + 0.5)" class="px-2 py-1 text-xs hover:bg-black/10 dark:hover:bg-white/10 font-bold">＋</button>
-                  </div>
-
+                <!-- 第一行：序号、香精名称输入、PG/VG 基质切换、删除按钮 -->
+                <div class="flex items-center space-x-2">
+                  <span class="text-xs font-mono px-2 py-1 rounded-md opacity-60 flex-shrink-0">#{{ index + 1 }}</span>
+                  <input type="text" v-model="flavour.name" placeholder="请输入香精名称"
+                         class="flex-1 min-w-0 bg-transparent text-sm font-medium focus:outline-none placeholder-gray-400">
+                  
                   <!-- 基质类型 PG / VG -->
-                  <div class="flex rounded-lg border overflow-hidden text-xs" style="border-color: var(--theme-border);">
+                  <div class="flex rounded-lg border overflow-hidden text-xs flex-shrink-0" style="border-color: var(--theme-border);">
                     <button @click="flavour.baseType = 'pg'"
                             :class="flavour.baseType === 'pg' ? 'bg-[#0071E3] text-white font-semibold' : 'bg-transparent text-gray-400'"
-                            class="px-2 py-1 transition-colors">PG</button>
+                            class="px-2.5 py-1 transition-colors">PG</button>
                     <button @click="flavour.baseType = 'vg'"
                             :class="flavour.baseType === 'vg' ? 'bg-zinc-700 dark:bg-zinc-200 text-white dark:text-black font-semibold' : 'bg-transparent text-gray-400'"
-                            class="px-2 py-1 transition-colors">VG</button>
+                            class="px-2.5 py-1 transition-colors">VG</button>
                   </div>
 
                   <!-- 删除按钮 -->
                   <button @click="removeFlavour(index)"
-                          class="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors" title="删除该香精">
+                          class="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors flex-shrink-0" title="删除该香精">
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
                   </button>
                 </div>
+
+                <!-- 第二行：【用量 (ml) 步进器】与【目标占比 (%) 步进器】 -->
+                <div class="grid grid-cols-2 gap-3 pt-2.5 border-t" style="border-color: var(--theme-border);">
+                  <!-- 用量 (ml) 步进器 -->
+                  <div>
+                    <div class="text-[10px] font-medium uppercase tracking-wider mb-1" style="color: var(--theme-subtext);">
+                      香精用量 (ml)
+                    </div>
+                    <div class="flex items-center rounded-xl border overflow-hidden" style="border-color: var(--theme-border); background-color: var(--theme-card);">
+                      <button @click="flavour.ml = Math.max(0.1, Number(((Number(flavour.ml) || 0) - 0.1).toFixed(2)))" class="px-2.5 py-1.5 text-xs hover:bg-black/10 dark:hover:bg-white/10 font-bold transition-colors">－</button>
+                      <input type="number" step="0.1" min="0.1" max="500" v-model.number="flavour.ml"
+                             class="w-full text-center font-mono text-xs font-semibold py-1.5 bg-transparent focus:outline-none">
+                      <span class="text-xs pr-2 opacity-60 font-mono">ml</span>
+                      <button @click="flavour.ml = Number(((Number(flavour.ml) || 0) + 0.1).toFixed(2))" class="px-2.5 py-1.5 text-xs hover:bg-black/10 dark:hover:bg-white/10 font-bold transition-colors">＋</button>
+                    </div>
+                  </div>
+
+                  <!-- 目标稀释占比 (%) 步进器 -->
+                  <div>
+                    <div class="text-[10px] font-medium uppercase tracking-wider mb-1" style="color: var(--theme-subtext);">
+                      目标占比 (%)
+                    </div>
+                    <div class="flex items-center rounded-xl border overflow-hidden" style="border-color: var(--theme-border); background-color: var(--theme-card);">
+                      <button @click="flavour.percentage = Math.max(0.1, Number(((Number(flavour.percentage) || 0) - 0.5).toFixed(1)))" class="px-2.5 py-1.5 text-xs hover:bg-black/10 dark:hover:bg-white/10 font-bold transition-colors">－</button>
+                      <input type="number" step="0.5" min="0.1" max="50" v-model.number="flavour.percentage"
+                             class="w-full text-center font-mono text-xs font-semibold py-1.5 bg-transparent focus:outline-none">
+                      <span class="text-xs pr-2 opacity-60 font-mono">%</span>
+                      <button @click="flavour.percentage = Math.min(50, Number(((Number(flavour.percentage) || 0) + 0.5).toFixed(1)))" class="px-2.5 py-1.5 text-xs hover:bg-black/10 dark:hover:bg-white/10 font-bold transition-colors">＋</button>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
 
@@ -616,19 +632,20 @@
                   <span class="text-[11px] font-mono uppercase tracking-widest text-zinc-400 dark:text-zinc-400 font-medium">NIRVANA Studio Recipe</span>
                   <h2 class="text-xl font-bold tracking-tight">{{ recipe.name || '未命名配方' }}</h2>
                   <p class="text-xs mt-0.5" style="color: var(--theme-subtext);">
-                    {{ recipe.amountToMake }}ml · {{ recipe.pg }}PG/{{ recipe.vg }}VG · {{ recipe.desiredNicotine }}mg
+                    {{ computedAmountToMake > 0 ? computedAmountToMake.toFixed(1) + 'ml' : '0ml' }} · {{ recipe.pg }}PG/{{ recipe.vg }}VG · {{ recipe.desiredNicotine }}mg
                   </p>
                 </div>
               </div>
               <span class="w-3 h-3 rounded-full" :class="isRecipeValid ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'"></span>
             </div>
 
-            <!-- 负数报警提示条 (如果 PG/VG 不足) -->
+            <!-- 负数报警提示条 (如果 PG/VG 不足 或 未设定香精) -->
             <div v-if="!isRecipeValid" class="mb-5 p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-500 text-xs leading-relaxed flex items-start space-x-2.5">
               <svg class="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               <div>
                 <span class="font-semibold block mb-0.5">配方比例超出物理边界：</span>
-                当前添加的香精与尼古丁中自带的 PG 或 VG 已超过设定的目标成品比例。请调高对应的 PG/VG 滑块，或适当减少香精用量。
+                <span v-if="computedAmountToMake <= 0">请在步骤 3 中添加至少一种香精并设定大于 0 的用量与占比，以推算成品总量。</span>
+                <span v-else>当前添加的香精与尼古丁中自带的 PG 或 VG 已超过设定的目标成品比例。请调高对应的 PG/VG 滑块，或适当减少香精用量。</span>
               </div>
             </div>
 
@@ -747,7 +764,7 @@
                 <div class="flex-1 min-w-0 pr-3">
                   <h4 class="text-xs font-bold truncate" style="color: var(--theme-text);">{{ item.name }}</h4>
                   <div class="flex items-center space-x-2 text-[11px] font-mono mt-0.5" style="color: var(--theme-subtext);">
-                    <span>{{ item.amountToMake }}ml</span>
+                    <span>{{ getRecipeTotalAmount(item) }}ml</span>
                     <span>·</span>
                     <span>{{ item.pg }}/{{ item.vg }}</span>
                     <span>·</span>
@@ -807,7 +824,6 @@
         const recipe = ref({
           id: Date.now(),
           name: '未命名配方',
-          amountToMake: 30,         // 总量 ml
           pg: 50,                   // 目标 PG %
           vg: 50,                   // 目标 VG %
           extraDiluent: 0,          // 额外稀释剂 %
@@ -818,6 +834,7 @@
           flavours: [
             {
               name: '示例香精',
+              ml: 1.5,
               percentage: 5,
               baseType: 'pg'
             }
@@ -853,14 +870,6 @@
           recipe.value.vg = vgVal;
         };
 
-        // 调整总量
-        const changeAmount = (delta) => {
-          const next = recipe.value.amountToMake + delta;
-          if (next >= 1 && next <= 2000) {
-            recipe.value.amountToMake = next;
-          }
-        };
-
         // 快捷设置尼古丁基底
         const setNicotineBase = (pg, vg) => {
           recipe.value.nicotineBasePg = pg;
@@ -871,6 +880,7 @@
         const addFlavour = () => {
           recipe.value.flavours.push({
             name: '示例香精',
+            ml: 0.5,
             percentage: 2,
             baseType: 'pg'
           });
@@ -880,14 +890,31 @@
           recipe.value.flavours.splice(index, 1);
         };
 
-        // 计算总香精百分比
+        // 计算总香精用量 (ml)
+        const totalFlavourMl = computed(() => {
+          return recipe.value.flavours.reduce((sum, f) => sum + (Number(f.ml) || 0), 0);
+        });
+
+        // 计算总香精百分比 (%)
         const totalFlavourPercentage = computed(() => {
           return recipe.value.flavours.reduce((sum, f) => sum + (Number(f.percentage) || 0), 0);
         });
 
-        // 核心数学计算模型 (基于标准物理密度)
+        // 核心反推逻辑：由香精用量与目标稀释比推算总成品容量 (ml)
+        const computedAmountToMake = computed(() => {
+          const ml = totalFlavourMl.value;
+          const pct = totalFlavourPercentage.value;
+          if (ml > 0 && pct > 0 && pct < 100) {
+            return Number((ml / (pct / 100)).toFixed(2));
+          }
+          return 0;
+        });
+
+        // 核心数学计算模型 (基于标准物理密度与反推总量)
         const calculationResults = computed(() => {
-          const amount = Number(recipe.value.amountToMake) || 0;
+          const amount = computedAmountToMake.value;
+          if (amount <= 0) return [];
+
           const extraDiluentPct = Number(recipe.value.extraDiluent) || 0;
           
           // 1. 额外稀释剂体积
@@ -911,12 +938,11 @@
           // 尼古丁基液密度：(PG比重*1.0 + VG比重*1.26)
           const nicGramsPerMl = (nicBasePg / 100) * 1.0 + (nicBaseVg / 100) * 1.26;
 
-          // 4. 香精计算
+          // 4. 香精计算 (直接使用用户设定的 ml 与基底)
           let totalPgFlavoursMl = 0;
           let totalVgFlavoursMl = 0;
           const parsedFlavours = recipe.value.flavours.map((f, idx) => {
-            const fPct = Number(f.percentage) || 0;
-            const fMl = amount * (fPct / 100);
+            const fMl = Number(f.ml) || 0;
             const isVg = f.baseType === 'vg';
             const density = isVg ? 1.26 : 1.00;
             if (isVg) {
@@ -930,7 +956,7 @@
               isFlavour: true,
               ml: fMl,
               grams: fMl * density,
-              percentage: amount > 0 ? (fMl / amount) * 100 : 0
+              percentage: amount > 0 ? (fMl / amount) * 100 : Number(f.percentage) || 0
             };
           });
 
@@ -1005,6 +1031,9 @@
 
         // 校验配方物理可行性 (纯 PG 与 纯 VG 均不可为负)
         const isRecipeValid = computed(() => {
+          if (computedAmountToMake.value <= 0) return false;
+          if (totalFlavourPercentage.value >= 100) return false;
+          if (calculationResults.value.length === 0) return false;
           return !calculationResults.value.some(item => item.ml < 0);
         });
 
@@ -1022,11 +1051,21 @@
           };
         });
 
+        // 计算已保存配方的总容量辅助函数
+        const getRecipeTotalAmount = (item) => {
+          if (!item.flavours || item.flavours.length === 0) return (item.amountToMake || 0);
+          const totalMl = item.flavours.reduce((sum, f) => sum + (Number(f.ml) || 0), 0);
+          const totalPct = item.flavours.reduce((sum, f) => sum + (Number(f.percentage) || 0), 0);
+          if (totalMl > 0 && totalPct > 0) return (totalMl / (totalPct / 100)).toFixed(1);
+          return (item.amountToMake || 0);
+        };
+
         // 本地配方保存
         const saveRecipeToLocal = () => {
           if (!isRecipeValid.value) return;
           const copy = JSON.parse(JSON.stringify(recipe.value));
           copy.id = Date.now();
+          copy.amountToMake = computedAmountToMake.value;
           savedRecipes.value.unshift(copy);
           localStorage.setItem('nirvana_saved_recipes', JSON.stringify(savedRecipes.value));
           showToast('配方已保存至本地');
@@ -1034,7 +1073,17 @@
 
         // 载入配方
         const loadRecipe = (item) => {
-          recipe.value = JSON.parse(JSON.stringify(item));
+          const loaded = JSON.parse(JSON.stringify(item));
+          // 兼容旧配方
+          if (loaded.flavours && Array.isArray(loaded.flavours)) {
+            const oldAmt = loaded.amountToMake || 30;
+            loaded.flavours.forEach(f => {
+              if (f.ml === undefined || f.ml === null) {
+                f.ml = Number((oldAmt * ((Number(f.percentage) || 0) / 100)).toFixed(2));
+              }
+            });
+          }
+          recipe.value = loaded;
           showToast(`已载入配方: ${item.name}`);
         };
 
@@ -1050,7 +1099,6 @@
           recipe.value = {
             id: Date.now(),
             name: '未命名配方',
-            amountToMake: 30,
             pg: 50,
             vg: 50,
             extraDiluent: 0,
@@ -1061,6 +1109,7 @@
             flavours: [
               {
                 name: '示例香精',
+                ml: 1.5,
                 percentage: 5,
                 baseType: 'pg'
               }
@@ -1081,7 +1130,7 @@
             backgroundColor: null
           }).then(canvas => {
             const link = document.createElement('a');
-            link.download = `NIRVANA_${recipe.value.name || '配方'}_${recipe.value.amountToMake}ml.png`;
+            link.download = `NIRVANA_${recipe.value.name || '配方'}_${computedAmountToMake.value.toFixed(1)}ml.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
             showToast('配方卡片图片已导出');
@@ -1138,11 +1187,13 @@
           savedRecipes,
           toastMessage,
           setPgVg,
-          changeAmount,
           setNicotineBase,
           addFlavour,
           removeFlavour,
+          totalFlavourMl,
           totalFlavourPercentage,
+          computedAmountToMake,
+          getRecipeTotalAmount,
           calculationResults,
           isRecipeValid,
           totalResult,
