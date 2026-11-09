@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Make My Vape · 电子烟液配比计算台 (E-Liquid Studio)</title>
+  <title>NIRVANA · 电子烟液配比计算台 (E-Liquid Studio)</title>
   
   <!-- 外部 CDN: Tailwind CSS, Vue 3, html2canvas -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -76,6 +76,18 @@
       transition: background-color 0.5s ease, color 0.5s ease;
       font-feature-settings: "cv02", "cv03", "cv04", "cv11";
       -webkit-font-smoothing: antialiased;
+    }
+
+    /* 厂牌 Logo 智能自适应背景与颜色反相 */
+    .brand-logo-img {
+      mix-blend-mode: multiply;
+      transition: filter 0.5s ease, opacity 0.3s ease, transform 0.3s ease;
+    }
+    @media (prefers-color-scheme: dark) {
+      .brand-logo-img {
+        filter: invert(1);
+        mix-blend-mode: screen;
+      }
     }
 
     /* 滚动渐入动画状态 */
@@ -206,42 +218,30 @@
     <header class="sticky top-0 z-50 h-12 w-full backdrop-blur-md border-b transition-colors duration-500 flex items-center justify-between px-6 lg:px-12"
             style="background-color: var(--theme-nav); border-color: var(--theme-border);">
       <div class="flex items-center space-x-3">
-        <!-- 调配烧杯/水滴 SVG 图标 -->
-        <svg class="w-5 h-5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M10 2v7.31M14 2v7.31M8.5 2h7M14 9.3a6.5 6.5 0 1 1-4 0"/>
-          <path d="M5.52 16h12.96"/>
-        </svg>
-        <span class="font-semibold text-sm tracking-tight tracking-wider">Make My Vape</span>
+        <!-- 厂牌微缩徽标 -->
+        <img src="./assets/nirvana-logo.jpeg" alt="NIRVANA Logo" class="brand-logo-img h-7 w-auto object-contain">
+        <span class="font-semibold text-sm tracking-wider">NIRVANA · 电子烟液配比台</span>
         <span class="text-xs px-2 py-0.5 rounded-full border border-blue-500/30 text-blue-500 font-mono">1:1 计算逻辑</span>
       </div>
 
-      <div class="flex items-center space-x-3 text-xs" style="color: var(--theme-subtext);">
-        <!-- 18+ 合规核验入口 -->
-        <button @click="openAgeModal" class="flex items-center space-x-1.5 py-1 px-2.5 rounded-full border transition-colors hover:border-amber-500/50"
-                style="border-color: var(--theme-border); background-color: var(--theme-card-sec); color: var(--theme-text);">
-          <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-          <span>18+ 合规核验</span>
-        </button>
-
-        <!-- 自动跟随系统状态指示器 -->
-        <div class="flex items-center space-x-1.5 py-1 px-2.5 rounded-full border" style="border-color: var(--theme-border); background-color: var(--theme-card-sec);">
-          <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-          </span>
-          <span class="hidden sm:inline">系统外观自适应</span>
-          <span class="sm:hidden">自适应</span>
-        </div>
-      </div>
+      <!-- 右侧留空（已移除原有 18+ 与系统自适应按钮） -->
+      <div></div>
     </header>
 
-    <!-- 2. Hero 区域 (经典 Apple 居中对称、大字体与留白) -->
-    <section class="w-full text-center py-20 lg:py-28 px-4 flex flex-col items-center justify-center reveal-on-scroll">
+    <!-- 2. Hero 区域 (NIRVANA 厂牌羽翼艺术徽标居中，经典 Apple 对称美学) -->
+    <section class="w-full text-center py-16 lg:py-24 px-4 flex flex-col items-center justify-center reveal-on-scroll">
+      
+      <!-- NIRVANA 厂牌羽翼 Logo 视觉主打 -->
+      <div class="mb-6 flex justify-center">
+        <img src="./assets/nirvana-logo.jpeg" alt="NIRVANA VAPE LABEL"
+             class="brand-logo-img h-44 sm:h-48 md:h-52 w-auto object-contain transition-transform duration-700 hover:scale-105 select-none">
+      </div>
+
       <!-- 极细小胶囊标签 -->
-      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium mb-6 border"
+      <div class="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full text-xs font-medium mb-6 border"
            style="border-color: var(--theme-border); background-color: var(--theme-card);">
         <span class="text-blue-500">●</span>
-        <span style="color: var(--theme-subtext);">电子烟液配比计算工具</span>
+        <span style="color: var(--theme-subtext);">NIRVANA VAPE LABEL · 配比计算工具</span>
       </div>
 
       <!-- 超大号主标题，带金属渐变文字 -->
@@ -251,7 +251,7 @@
       </h1>
 
       <p class="text-base sm:text-lg max-w-2xl mx-auto leading-relaxed mb-10" style="color: var(--theme-subtext);">
-        采用 MakeMyVape 的物理计算逻辑。VG 密度按 1.26 g/ml 计算，PG 与稀释剂按 1.00 g/ml 计算，支持按成分比例换算体积、克重与滴数，并检验基底平衡。
+        采用高精度物理计算逻辑。VG 密度按 1.26 g/ml 计算，PG 与稀释剂按 1.00 g/ml 计算，支持按成分比例换算体积、克重与滴数，并检验基底平衡。
       </p>
 
       <div class="flex items-center space-x-4">
@@ -350,7 +350,7 @@
               <label class="block text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--theme-subtext);">
                 配方名称 (Recipe Name)
               </label>
-              <input type="text" v-model="recipe.name" placeholder="例如：中式经典烤烟配方 (Classic Tobacco Specimen)"
+              <input type="text" v-model="recipe.name" placeholder="请输入配方名称"
                      class="w-full px-4 py-3 rounded-xl border text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
                      style="background-color: var(--theme-input-bg); border-color: var(--theme-border); color: var(--theme-text);">
             </div>
@@ -546,8 +546,13 @@
               </div>
             </div>
 
+            <!-- 空香精提示 -->
+            <div v-if="recipe.flavours.length === 0" class="text-center py-6 text-xs" style="color: var(--theme-subtext);">
+              暂未添加香精条目。点击下方按钮添加香精成分。
+            </div>
+
             <!-- 香精条目动态列表 -->
-            <div class="space-y-3 mb-6">
+            <div v-else class="space-y-3 mb-6">
               <div v-for="(flavour, index) in recipe.flavours" :key="index"
                    class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3.5 rounded-2xl border transition-all duration-300"
                    style="background-color: var(--theme-input-bg); border-color: var(--theme-border);">
@@ -555,7 +560,7 @@
                 <!-- 序号与名称输入 -->
                 <div class="flex items-center space-x-2 flex-1">
                   <span class="text-xs font-mono px-2 py-1 rounded-md opacity-60">#{{ index + 1 }}</span>
-                  <input type="text" v-model="flavour.name" placeholder="香精或提取物名称 (如: 烤烟提取物)"
+                  <input type="text" v-model="flavour.name" placeholder="请输入香精或提取物名称"
                          class="w-full bg-transparent text-sm font-medium focus:outline-none placeholder-gray-400">
                 </div>
 
@@ -612,12 +617,15 @@
             <div class="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
             <div class="flex items-center justify-between pb-4 border-b mb-6" style="border-color: var(--theme-border);">
-              <div>
-                <span class="text-[11px] font-mono uppercase tracking-widest text-blue-500 font-semibold">Master Recipe</span>
-                <h2 class="text-xl font-bold tracking-tight">{{ recipe.name || '调配配方' }}</h2>
-                <p class="text-xs mt-0.5" style="color: var(--theme-subtext);">
-                  {{ recipe.amountToMake }}ml · {{ recipe.pg }}PG/{{ recipe.vg }}VG · {{ recipe.desiredNicotine }}mg
-                </p>
+              <div class="flex items-start space-x-3">
+                <img src="./assets/nirvana-logo.jpeg" alt="NIRVANA Logo" class="brand-logo-img h-8 w-auto object-contain mt-0.5">
+                <div>
+                  <span class="text-[11px] font-mono uppercase tracking-widest text-blue-500 font-semibold">NIRVANA Studio Recipe</span>
+                  <h2 class="text-xl font-bold tracking-tight">{{ recipe.name || '未命名配方' }}</h2>
+                  <p class="text-xs mt-0.5" style="color: var(--theme-subtext);">
+                    {{ recipe.amountToMake }}ml · {{ recipe.pg }}PG/{{ recipe.vg }}VG · {{ recipe.desiredNicotine }}mg
+                  </p>
+                </div>
               </div>
               <span class="w-3 h-3 rounded-full" :class="isRecipeValid ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'"></span>
             </div>
@@ -687,7 +695,7 @@
                   劝阻青少年吸电子烟 禁止中小学生吸电子烟
                 </div>
                 <div class="mt-1 text-[10px] opacity-75">
-                  [学术模拟演示 · 依据《电子烟管理办法》及 GB 41700-2022，严禁非法调配、生产与流通销售]
+                  [NIRVANA VAPE LABEL · 学术模拟演示 · 依据《电子烟管理办法》及 GB 41700-2022，严禁非法调配、生产与流通销售]
                 </div>
               </div>
             </div>
@@ -779,14 +787,13 @@
       </div>
     </main>
 
-    <!-- 4. 页脚 (Apple 极简排版与版权) -->
+    <!-- 4. 页脚 (NIRVANA 厂牌版权与极简排版) -->
     <footer class="w-full border-t py-8 text-center text-xs transition-colors duration-500 no-print"
             style="border-color: var(--theme-border); background-color: var(--theme-card); color: var(--theme-subtext);">
       <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div class="flex items-center space-x-2">
-          <span>Make My Vape 调配计算</span>
-          <span>·</span>
-          <span>仅供学术模拟演示</span>
+          <img src="./assets/nirvana-logo.jpeg" alt="NIRVANA Logo" class="brand-logo-img h-4 w-auto object-contain">
+          <span>NIRVANA VAPE LABEL · 电子烟液配比计算台</span>
           <span>·</span>
           <span class="text-amber-600 dark:text-amber-400 font-medium">未成年人禁止使用</span>
         </div>
@@ -808,10 +815,10 @@
         const showAgeModal = ref(false);
         const isUnderageBlocked = ref(false);
 
-        // 当前调配配方数据状态
+        // 当前调配配方数据状态（纯净初始态，无预设示例配方）
         const recipe = ref({
           id: Date.now(),
-          name: '中式经典烤烟配方 (Classic Tobacco Specimen)',
+          name: '未命名配方',
           amountToMake: 30,         // 总量 ml
           pg: 50,                   // 目标 PG %
           vg: 50,                   // 目标 VG %
@@ -819,11 +826,8 @@
           nicotineBaseStrength: 20, // 尼古丁基液浓度 mg/ml (国标常见规格 20mg)
           nicotineBasePg: 100,      // 尼古丁基液 PG %
           nicotineBaseVg: 0,        // 尼古丁基液 VG %
-          desiredNicotine: 3,       // 期望成品浓度 mg/ml
-          flavours: [
-            { name: '烤烟提取物 (Flue-cured Extract)', percentage: 4, baseType: 'pg' },
-            { name: '坚果香韵 (Nutty Accent)', percentage: 1.5, baseType: 'pg' }
-          ]
+          desiredNicotine: 0,       // 期望成品浓度 mg/ml (初始 0mg)
+          flavours: []              // 空白纯净初始态
         });
 
         const savedRecipes = ref([]);
@@ -840,19 +844,13 @@
         // 年龄确认
         const confirmAge = () => {
           showAgeModal.value = false;
-          localStorage.setItem('mmv_age_verified', 'true');
+          localStorage.setItem('nirvana_age_verified', 'true');
           showToast('年龄核验通过');
         };
 
         // 年龄拒绝（未成年拦截）
         const rejectAge = () => {
           isUnderageBlocked.value = true;
-        };
-
-        // 手动打开年龄核验
-        const openAgeModal = () => {
-          isUnderageBlocked.value = false;
-          showAgeModal.value = true;
         };
 
         // 快捷设置 PG/VG 比例
@@ -893,7 +891,7 @@
           return recipe.value.flavours.reduce((sum, f) => sum + (Number(f.percentage) || 0), 0);
         });
 
-        // 核心数学计算模型 (1:1 严格复刻 MakeMyVape)
+        // 核心数学计算模型 (基于标准物理密度)
         const calculationResults = computed(() => {
           const amount = Number(recipe.value.amountToMake) || 0;
           const extraDiluentPct = Number(recipe.value.extraDiluent) || 0;
@@ -1039,7 +1037,7 @@
           const copy = JSON.parse(JSON.stringify(recipe.value));
           copy.id = Date.now();
           savedRecipes.value.unshift(copy);
-          localStorage.setItem('mmv_saved_recipes', JSON.stringify(savedRecipes.value));
+          localStorage.setItem('nirvana_saved_recipes', JSON.stringify(savedRecipes.value));
           showToast('配方已保存至本地');
         };
 
@@ -1052,15 +1050,15 @@
         // 删除本地配方
         const deleteSavedRecipe = (index) => {
           savedRecipes.value.splice(index, 1);
-          localStorage.setItem('mmv_saved_recipes', JSON.stringify(savedRecipes.value));
+          localStorage.setItem('nirvana_saved_recipes', JSON.stringify(savedRecipes.value));
           showToast('已删除该配方');
         };
 
-        // 重置为默认推荐值
+        // 重置为纯净默认值
         const resetToDefault = () => {
           recipe.value = {
             id: Date.now(),
-            name: '中式经典烤烟配方 (Classic Tobacco Specimen)',
+            name: '未命名配方',
             amountToMake: 30,
             pg: 50,
             vg: 50,
@@ -1068,11 +1066,8 @@
             nicotineBaseStrength: 20,
             nicotineBasePg: 100,
             nicotineBaseVg: 0,
-            desiredNicotine: 3,
-            flavours: [
-              { name: '烤烟提取物 (Flue-cured Extract)', percentage: 4, baseType: 'pg' },
-              { name: '坚果香韵 (Nutty Accent)', percentage: 1.5, baseType: 'pg' }
-            ]
+            desiredNicotine: 0,
+            flavours: []
           };
           showToast('已重置为默认参数');
         };
@@ -1089,7 +1084,7 @@
             backgroundColor: null
           }).then(canvas => {
             const link = document.createElement('a');
-            link.download = `${recipe.value.name || '调配配方'}_${recipe.value.amountToMake}ml.png`;
+            link.download = `NIRVANA_${recipe.value.name || '配方'}_${recipe.value.amountToMake}ml.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
             showToast('配方卡片图片已导出');
@@ -1107,12 +1102,12 @@
         // 页面加载时恢复本地存储与核验状态
         onMounted(() => {
           // 检查年龄核验状态
-          const verified = localStorage.getItem('mmv_age_verified');
+          const verified = localStorage.getItem('nirvana_age_verified');
           if (verified !== 'true') {
             showAgeModal.value = true;
           }
 
-          const stored = localStorage.getItem('mmv_saved_recipes');
+          const stored = localStorage.getItem('nirvana_saved_recipes');
           if (stored) {
             try {
               savedRecipes.value = JSON.parse(stored);
@@ -1120,42 +1115,9 @@
               console.error(e);
             }
           } else {
-            // 预存范例配方
-            savedRecipes.value = [
-              {
-                id: 1,
-                name: '中式经典烤烟 (Classic Flue-cured Tobacco)',
-                amountToMake: 30,
-                pg: 50,
-                vg: 50,
-                extraDiluent: 0,
-                nicotineBaseStrength: 20,
-                nicotineBasePg: 100,
-                nicotineBaseVg: 0,
-                desiredNicotine: 3,
-                flavours: [
-                  { name: '烤烟提取物 (Flue-cured Extract)', percentage: 5, baseType: 'pg' },
-                  { name: '香兰素与微量坚果 (Vanillin & Nutty Note)', percentage: 1.5, baseType: 'pg' }
-                ]
-              },
-              {
-                id: 2,
-                name: '清润薄荷烤烟 (Mint Flue-cured)',
-                amountToMake: 60,
-                pg: 40,
-                vg: 60,
-                extraDiluent: 0,
-                nicotineBaseStrength: 20,
-                nicotineBasePg: 100,
-                nicotineBaseVg: 0,
-                desiredNicotine: 3,
-                flavours: [
-                  { name: '烟草提取物 (Tobacco Absolute)', percentage: 6, baseType: 'pg' },
-                  { name: '薄荷脑 (Menthol Extract)', percentage: 1, baseType: 'pg' }
-                ]
-              }
-            ];
-            localStorage.setItem('mmv_saved_recipes', JSON.stringify(savedRecipes.value));
+            // 纯净初始态，不预设任何示例配方
+            savedRecipes.value = [];
+            localStorage.setItem('nirvana_saved_recipes', JSON.stringify([]));
           }
 
           // 初始化 IntersectionObserver 实现滚动平滑淡入
@@ -1175,7 +1137,6 @@
           isUnderageBlocked,
           confirmAge,
           rejectAge,
-          openAgeModal,
           recipe,
           savedRecipes,
           toastMessage,
