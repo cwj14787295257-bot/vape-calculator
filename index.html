@@ -603,7 +603,7 @@
 
           <!-- Bento Card 4: 实时调配结果清单与配方卡片 -->
           <div id="recipeCard"
-               class="reveal-on-scroll rounded-3xl p-6 sm:p-8 border shadow-lg transition-all duration-500 hover:shadow-2xl bento-card relative overflow-hidden"
+               class="reveal-on-scroll rounded-3xl p-4 sm:p-7 border shadow-lg transition-all duration-500 hover:shadow-2xl bento-card relative overflow-hidden"
                style="background-color: var(--theme-card); border-color: var(--theme-border);">
             
             <!-- 顶部装饰光泽 (Apple 风格暗夜光泽) -->
@@ -637,32 +637,37 @@
               <table class="w-full text-left text-xs font-mono">
                 <thead>
                   <tr class="border-b" style="border-color: var(--theme-border); color: var(--theme-subtext);">
-                    <th class="py-2.5 font-medium">原料成分</th>
-                    <th class="py-2.5 text-right font-medium">毫升(ml)</th>
-                    <th class="py-2.5 text-right font-medium">克重(g)</th>
-                    <th class="py-2.5 text-right font-medium">比例</th>
+                    <th class="py-2.5 px-2 font-medium">原料成分</th>
+                    <th class="py-2.5 px-2 text-right font-medium whitespace-nowrap">毫升(ml)</th>
+                    <th class="py-2.5 px-2 text-right font-medium whitespace-nowrap">克重(g)</th>
+                    <th class="py-2.5 pl-2 pr-1 text-right font-medium whitespace-nowrap">比例</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y" style="border-color: var(--theme-border);">
                   <tr v-for="(item, idx) in calculationResults" :key="idx"
                       :class="{'bg-red-500/10 text-red-400 font-bold': item.ml < 0}"
                       class="transition-colors hover:bg-black/5 dark:hover:bg-white/5">
-                    <td class="py-3 font-sans font-medium flex items-center space-x-2">
-                      <span class="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500 flex-shrink-0"></span>
-                      <span class="truncate max-w-[130px]">{{ item.name }}</span>
+                    <td class="py-2.5 px-2 font-sans font-medium">
+                      <div class="flex items-center space-x-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500 flex-shrink-0 mt-0.5 self-start sm:self-center"></span>
+                        <div class="min-w-0">
+                          <div class="text-xs font-semibold leading-tight" style="color: var(--theme-text);">{{ item.name }}</div>
+                          <div v-if="item.subtext" class="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 leading-tight mt-0.5">{{ item.subtext }}</div>
+                        </div>
+                      </div>
                     </td>
-                    <td class="py-3 text-right font-semibold">{{ item.ml.toFixed(2) }}</td>
-                    <td class="py-3 text-right font-semibold text-zinc-700 dark:text-zinc-300">{{ item.grams.toFixed(2) }}g</td>
-                    <td class="py-3 text-right font-semibold">{{ item.percentage.toFixed(1) }}%</td>
+                    <td class="py-2.5 px-2 text-right font-semibold whitespace-nowrap" style="color: var(--theme-text);">{{ item.ml.toFixed(2) }}</td>
+                    <td class="py-2.5 px-2 text-right font-semibold whitespace-nowrap text-zinc-700 dark:text-zinc-300">{{ item.grams.toFixed(2) }}</td>
+                    <td class="py-2.5 pl-2 pr-1 text-right font-semibold whitespace-nowrap" style="color: var(--theme-text);">{{ item.percentage.toFixed(1) }}%</td>
                   </tr>
                 </tbody>
                 <!-- 总计汇总行 -->
                 <tfoot>
-                  <tr class="border-t-2 font-bold text-sm" style="border-color: var(--theme-border);">
-                    <td class="pt-4 font-sans">合计 (Total)</td>
-                    <td class="pt-4 text-right">{{ totalResult.ml.toFixed(2) }}ml</td>
-                    <td class="pt-4 text-right text-zinc-900 dark:text-white">{{ totalResult.grams.toFixed(2) }}g</td>
-                    <td class="pt-4 text-right">100%</td>
+                  <tr class="border-t-2 font-bold text-xs sm:text-sm" style="border-color: var(--theme-border);">
+                    <td class="pt-3.5 pb-1 px-2 font-sans">合计 (Total)</td>
+                    <td class="pt-3.5 pb-1 px-2 text-right whitespace-nowrap">{{ totalResult.ml.toFixed(2) }} ml</td>
+                    <td class="pt-3.5 pb-1 px-2 text-right text-zinc-900 dark:text-white whitespace-nowrap">{{ totalResult.grams.toFixed(2) }} g</td>
+                    <td class="pt-3.5 pb-1 pl-2 pr-1 text-right whitespace-nowrap">100%</td>
                   </tr>
                 </tfoot>
               </table>
@@ -920,7 +925,8 @@
               totalPgFlavoursMl += fMl;
             }
             return {
-              name: f.name ? `香精: ${f.name}` : `香精 #${idx + 1}`,
+              name: f.name ? f.name : `香精 #${idx + 1}`,
+              subtext: isVg ? 'VG 基质' : 'PG 基质',
               isFlavour: true,
               ml: fMl,
               grams: fMl * density,
@@ -943,7 +949,8 @@
 
           // 纯 PG
           results.push({
-            name: 'PG (丙二醇)',
+            name: 'PG',
+            subtext: '纯丙二醇',
             isFlavour: false,
             ml: purePgToAddMl,
             grams: purePgToAddMl * 1.0,
@@ -952,7 +959,8 @@
 
           // 纯 VG
           results.push({
-            name: 'VG (植物甘油)',
+            name: 'VG',
+            subtext: '纯植物甘油',
             isFlavour: false,
             ml: pureVgToAddMl,
             grams: pureVgToAddMl * 1.26,
@@ -961,14 +969,15 @@
 
           // 尼古丁基液 (若配置了浓度)
           if (nicBaseStrength > 0 && desiredNic > 0) {
-            let nicLabel = '尼古丁基液';
-            if (nicBasePg === 100 && nicBaseVg === 0) nicLabel += ' (100% PG)';
-            else if (nicBasePg === 0 && nicBaseVg === 100) nicLabel += ' (100% VG)';
-            else if (nicBasePg === 50 && nicBaseVg === 50) nicLabel += ' (50/50)';
-            else nicLabel += ` (${nicBasePg}PG/${nicBaseVg}VG)`;
+            let nicSub = '';
+            if (nicBasePg === 100 && nicBaseVg === 0) nicSub = '100% PG · ' + nicBaseStrength + 'mg';
+            else if (nicBasePg === 0 && nicBaseVg === 100) nicSub = '100% VG · ' + nicBaseStrength + 'mg';
+            else if (nicBasePg === 50 && nicBaseVg === 50) nicSub = '50PG/50VG · ' + nicBaseStrength + 'mg';
+            else nicSub = `${nicBasePg}PG/${nicBaseVg}VG · ${nicBaseStrength}mg`;
 
             results.push({
-              name: nicLabel,
+              name: '尼古丁基液',
+              subtext: nicSub,
               isFlavour: false,
               ml: nicMl,
               grams: nicMl * nicGramsPerMl,
@@ -979,7 +988,8 @@
           // 额外稀释剂 (若设置)
           if (extraDiluentMl > 0) {
             results.push({
-              name: '稀释剂 (去离子水/溶剂)',
+              name: '稀释剂',
+              subtext: '去离子水/溶剂',
               isFlavour: false,
               ml: extraDiluentMl,
               grams: extraDiluentMl * 1.0,
