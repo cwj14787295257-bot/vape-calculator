@@ -479,13 +479,24 @@
                 <label class="text-xs font-medium uppercase tracking-wider" style="color: var(--theme-subtext);">
                   现有尼古丁原液浓度 (Base Strength)
                 </label>
-                <span class="font-mono text-sm font-semibold" style="color: var(--theme-text);">{{ recipe.nicotineBaseStrength }} mg/ml</span>
+                <!-- 浓度精确输入框与微调步进器 -->
+                <div class="flex items-center rounded-xl border overflow-hidden"
+                     style="border-color: var(--theme-border); background-color: var(--theme-input-bg);">
+                  <button @click="recipe.nicotineBaseStrength = Math.max(0, (Number(recipe.nicotineBaseStrength) || 0) - 5); if(recipe.desiredNicotine > recipe.nicotineBaseStrength) recipe.desiredNicotine = recipe.nicotineBaseStrength;"
+                          class="px-2.5 py-1 text-xs hover:bg-black/10 dark:hover:bg-white/10 font-bold transition-colors">－</button>
+                  <input type="number" min="0" max="250" step="1" v-model.number="recipe.nicotineBaseStrength"
+                         @input="if(recipe.desiredNicotine > recipe.nicotineBaseStrength) recipe.desiredNicotine = recipe.nicotineBaseStrength"
+                         class="w-14 text-center font-mono text-xs font-semibold py-1 bg-transparent focus:outline-none">
+                  <span class="text-xs pr-2 opacity-60 font-mono">mg/ml</span>
+                  <button @click="recipe.nicotineBaseStrength = Math.min(250, (Number(recipe.nicotineBaseStrength) || 0) + 5)"
+                          class="px-2.5 py-1 text-xs hover:bg-black/10 dark:hover:bg-white/10 font-bold transition-colors">＋</button>
+                </div>
               </div>
 
               <!-- 快捷选择胶囊 -->
               <div class="flex flex-wrap gap-2 mb-3">
-                <button v-for="st in [0, 18, 20, 36, 72, 100]" :key="st"
-                        @click="recipe.nicotineBaseStrength = st"
+                <button v-for="st in [0, 20, 36, 72, 100, 150, 200, 250]" :key="st"
+                        @click="recipe.nicotineBaseStrength = st; if(recipe.desiredNicotine > st) recipe.desiredNicotine = st;"
                         :class="{'border-blue-500 text-blue-500 font-bold bg-blue-500/10': recipe.nicotineBaseStrength === st}"
                         class="px-3 py-1.5 text-xs rounded-full border transition-all hover:border-blue-400"
                         style="border-color: var(--theme-border);">
@@ -493,7 +504,9 @@
                 </button>
               </div>
 
-              <input type="range" min="0" max="100" step="1" v-model.number="recipe.nicotineBaseStrength" class="w-full">
+              <input type="range" min="0" max="250" step="1" v-model.number="recipe.nicotineBaseStrength"
+                     @input="if(recipe.desiredNicotine > recipe.nicotineBaseStrength) recipe.desiredNicotine = recipe.nicotineBaseStrength"
+                     class="w-full">
             </div>
 
             <!-- 尼古丁基底类型 (PG / VG 载体) -->
@@ -539,14 +552,25 @@
                   <span v-if="recipe.desiredNicotine > 20" class="text-[11px] font-mono px-2 py-0.5 rounded bg-zinc-500/10 text-zinc-500 dark:text-zinc-400 border border-zinc-500/20">
                     注：国标限值 ≤ 20mg/g
                   </span>
-                  <span class="font-mono text-sm font-semibold" style="color: var(--theme-text);">{{ recipe.desiredNicotine }} mg/ml</span>
+                  <!-- 期望浓度精确输入框与微调步进器 -->
+                  <div class="flex items-center rounded-xl border overflow-hidden"
+                       style="border-color: var(--theme-border); background-color: var(--theme-input-bg);">
+                    <button @click="recipe.desiredNicotine = Math.max(0, Number(((Number(recipe.desiredNicotine) || 0) - 0.5).toFixed(1)))"
+                            class="px-2.5 py-1 text-xs hover:bg-black/10 dark:hover:bg-white/10 font-bold transition-colors">－</button>
+                    <input type="number" min="0" :max="recipe.nicotineBaseStrength > 0 ? Math.min(50, recipe.nicotineBaseStrength) : 0" step="0.5"
+                           v-model.number="recipe.desiredNicotine"
+                           class="w-14 text-center font-mono text-xs font-semibold py-1 bg-transparent focus:outline-none">
+                    <span class="text-xs pr-2 opacity-60 font-mono">mg/ml</span>
+                    <button @click="recipe.desiredNicotine = Math.min(recipe.nicotineBaseStrength > 0 ? Math.min(50, recipe.nicotineBaseStrength) : 0, Number(((Number(recipe.desiredNicotine) || 0) + 0.5).toFixed(1)))"
+                            class="px-2.5 py-1 text-xs hover:bg-black/10 dark:hover:bg-white/10 font-bold transition-colors">＋</button>
+                  </div>
                 </div>
               </div>
 
               <!-- 快捷选择胶囊 -->
               <div class="flex flex-wrap gap-2 mb-3">
-                <button v-for="d in [0, 3, 6, 9, 12, 20]" :key="d"
-                        @click="recipe.desiredNicotine = d"
+                <button v-for="d in [0, 3, 6, 9, 12, 20, 35, 50]" :key="d"
+                        @click="recipe.desiredNicotine = Math.min(d, recipe.nicotineBaseStrength)"
                         :class="{'border-blue-500 text-blue-500 font-bold bg-blue-500/10': recipe.desiredNicotine === d}"
                         class="px-3 py-1.5 text-xs rounded-full border transition-all hover:border-blue-400"
                         style="border-color: var(--theme-border);">
@@ -554,7 +578,7 @@
                 </button>
               </div>
 
-              <input type="range" min="0" :max="recipe.nicotineBaseStrength > 0 ? Math.min(30, recipe.nicotineBaseStrength) : 0" step="0.5"
+              <input type="range" min="0" :max="recipe.nicotineBaseStrength > 0 ? Math.min(50, recipe.nicotineBaseStrength) : 0" step="0.5"
                      v-model.number="recipe.desiredNicotine" class="w-full">
             </div>
 
